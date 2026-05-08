@@ -1,0 +1,165 @@
+<a href="Hamster Games.html">Back</a>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Snake Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1>3D Snake</h1>
+    <p>Steuerung: <b>Pfeiltasten</b> oder <b>WASD</b></p>
+    <p>Score: <span id="score">0</span></p>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+
+    // --- SETUP ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Licht
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 10, 7.5);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+
+    // Spielfeld (Boden)
+    const gridSize = 40;
+    const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x00ff00, 0x0a12ff);
+    scene.add(gridHelper);
+
+    // --- SPIELLOGIK ---
+    let snake = [];
+    let snakeDir = { x: 1, z: 0 };
+    let nextDir = { x: 1, z: 0 };
+    let food;
+    let score = 0;
+    const moveSpeed = 80; // Millisekunden pro Schritt
+
+    const cubeGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+    const snakeMat = new THREE.MeshStandardMaterial({ color: 0xb8e114 });
+    const foodMat = new THREE.MeshStandardMaterial({ color: 0xa50909 });
+
+    function initSnake() {
+        for(let i = 0; i < 3; i++) {
+            const part = new THREE.Mesh(cubeGeo, snakeMat);
+            part.position.set(-i, 1, 0);
+            snake.push(part);
+            scene.add(part);
+        }
+    }
+
+    function spawnFood() {
+        if (food) scene.remove(food);
+        food = new THREE.Mesh(cubeGeo, foodMat);
+        food.position.set(
+            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5,
+            0.5,
+            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5
+        );
+        scene.add(food);
+
+        if (food) scene.remove(food);
+        food = new THREE.Mesh(cubeGeo, foodMat);
+        food.position.set(
+            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5,
+            0.5,
+            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5
+        );
+        scene.add(food);
+    }
+
+    initSnake();
+    spawnFood();
+
+     // Camera
+    camera.position.set(0, 35, 15);
+    camera.lookAt(0, 0, 0);
+
+    // Steuerung
+    window.addEventListener('keydown', (e) => {
+        switch(e.key.toLowerCase()) {
+            case 'arrowup': case 'w': if(snakeDir.z === 0) nextDir = { x: 0, z: -1 }; break;
+            case 'arrowdown': case 's': if(snakeDir.z === 0) nextDir = { x: 0, z: 1 }; break;
+            case 'arrowleft': case 'a': if(snakeDir.x === 0) nextDir = { x: -1, z: 0 }; break;
+            case 'arrowright': case 'd': if(snakeDir.x === 0) nextDir = { x: 1, z: 0 }; break;
+        }
+    });
+
+    function update() {
+        snakeDir = nextDir;
+        const head = snake[0].position.clone();
+        head.x += snakeDir.x;
+        head.z += snakeDir.z;
+
+        // Kollision mit Wand
+        if (Math.abs(head.x) > gridSize/2 || Math.abs(head.z) > gridSize/2) {
+            alert("Game over! Score: " + score);
+            location.reload();
+            return;
+        }
+
+        // Kollision mit sich selbst
+        for (let part of snake) {
+            if (head.distanceTo(part.position) < 0.1) {
+                alert("Game Over!");
+                location.reload();
+                return;
+            }
+        }
+
+        // Essen checken
+        if (head.distanceTo(food.position) < 1) {
+            score++;
+            document.getElementById('score').innerText = score;
+            spawnFood();
+        } else {
+            const tail = snake.pop();
+            scene.remove(tail);
+        }
+
+        const newHead = new THREE.Mesh(cubeGeo, snakeMat);
+        newHead.position.copy(head);
+        snake.unshift(newHead);
+        scene.add(newHead);
+
+        setTimeout(update, moveSpeed);
+    }
+
+    update();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize Handling
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
