@@ -1,0 +1,180 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_blank">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Infinite Speed Racer</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; background: #000000; }
+        #ui-left { position: absolute; top: 20px; left: 20px; color: #ffffff; background: rgba(0,0,0,0.8); 
+                   padding: 15px; border-radius: 5px; border: 2px solid #ffffff; text-shadow: 0 0 5px #ffffff; }
+        #ui-right { position: absolute; top: 20px; right: 20px; color: #ffffff; background: rgba(0,0,0,0.8); 
+                    padding: 15px; border-radius: 5px; border: 2px solid #ffffff; text-align: right; 
+                    text-shadow: 0 0 5px #ffffff; min-width: 150px; }
+        .value { font-size: 2.2em; font-weight: bold; display: block; }
+        .label { font-size: 0.7em; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <div id="ui-left">
+        <span class="label">COLLECTED</span>
+        <span id="coinCount" class="value">0</span>
+    </div>
+
+    <div id="ui-right">
+        <span class="label">VELOCITY</span>
+        <span id="speedDisplay" class="value">0</span>
+        <span id="maxDisplay" style="font-size: 0.8em; color: #ffffff;">MAX REACHED: 40</span>
+    </div>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x10000);
+        scene.fog = new THREE.Fog(0x10000, 50, 250);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const sun = new THREE.PointLight(0xffffff, 2.5, 1000);
+        sun.position.set(50, 100, 50);
+        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0x5500ff, 0.3));
+
+        // Riesige Map für infinite Speed
+        const grid = new THREE.GridHelper(5000, 100, 0xff00ff, 0x220022);
+        scene.add(grid);
+
+        // --- GAME LOGIK ---
+        let coinsCollected = 0;
+        let currentMaxSpeed = 0.4;
+        let speed = 0;
+        let acceleration = 0.02;
+        const friction = 0.98; // Etwas weniger Reibung für mehr Speed-Gefühl
+        let turn = 0;
+        const keys = {};
+        const coins = [];
+
+// --- AUTO ---
+const car = new THREE.Group();
+const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 0.5, 2.5),
+    // ÄNDERUNG: color von 0xa6a6a6 auf 0xa6a6a6 gesetzt
+    new THREE.MeshStandardMaterial({ color: 0xa6a6a6, metalness: 0, roughness: 0 })
+);
+body.position.y = 0.6;
+car.add(body);
+
+// Auch den Spoiler grün machen
+const spoiler = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 0.1, 0.3),
+    new THREE.MeshStandardMaterial({ color: 0x3d3d3d })
+);
+spoiler.position.set(0, 0.9, -1);
+car.add(spoiler);
+
+        // Räder animieren
+        const wheels = [];
+        const wGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
+        const wMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        [[-0.7,0.4,0.8], [0.7,0.4,0.8], [-0.7,0.4,-0.8], [0.7,0.4,-0.8]].forEach(pos => {
+            const w = new THREE.Mesh(wGeo, wMat);
+            w.rotation.z = Math.PI / 2;
+            w.position.set(...pos);
+            wheels.push(w);
+            car.add(w);
+        });
+        scene.add(car);
+
+        // --- COIN SPAWNER ---
+        const coinGeo = new THREE.TorusGeometry(0.6, 0.1, 8, 16);
+        const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffffff });
+
+        function spawnCoin() {
+            const coin = new THREE.Mesh(coinGeo, coinMat);
+            // Coins spawnen jetzt in einem viel größeren Radius
+            coin.position.set((Math.random() - 0.5) * 500, 1, (Math.random() - 0.5) * 500);
+            scene.add(coin);
+            coins.push(coin);
+        }
+        for(let i = 0; i < 40; i++) spawnCoin();
+
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function animate() {
+            if (keys['KeyW']) speed += acceleration;
+            if (keys['KeyS']) speed -= acceleration;
+            
+            if (Math.abs(speed) > 0.01) {
+                // Lenkung wird bei hoher Geschwindigkeit stabiler
+                const turnSpeed = 0.008 / (1 + speed * 0.5); 
+                if (keys['KeyA']) turn += turnSpeed * (speed > 0 ? 1 : -1);
+                if (keys['KeyD']) turn -= turnSpeed * (speed > 0 ? 1 : -1);
+            }
+
+            // DER TRICK: Kein Math.min(1.2) mehr -> Unendliches Potenzial
+            speed *= friction;
+            
+            car.rotation.y += turn;
+            turn *= 0.85;
+            car.translateZ(speed);
+
+            wheels.forEach(w => w.rotation.x += speed * 2);
+
+            coins.forEach((coin, index) => {
+                coin.rotation.y += 0.05;
+                if(car.position.distanceTo(coin.position) < 2) {
+                    scene.remove(coin);
+                    coins.splice(index, 1);
+                    coinsCollected++;
+                    
+                    // POWER UP: Erhöht den Top-Speed massiv
+                    currentMaxSpeed += 0.15; 
+                    acceleration += 0.005;
+                    
+                    document.getElementById('coinCount').innerText = coinsCollected;
+                    document.getElementById('maxDisplay').innerText = "POTENTIAL: " + Math.round(currentMaxSpeed * 150);
+                    
+                    spawnCoin();
+                }
+            });
+
+            // Tacho
+            document.getElementById('speedDisplay').innerText = Math.abs(Math.round(speed * 150));
+
+            // Kamera-Abstand vergrößert sich bei hoher Geschwindigkeit
+            const dynamicDist = -10 - (speed * 5);
+            const camPos = new THREE.Vector3(0, 4 + (speed * 2), dynamicDist).applyMatrix4(car.matrixWorld);
+            camera.position.lerp(camPos, 0.1);
+            camera.lookAt(car.position);
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
