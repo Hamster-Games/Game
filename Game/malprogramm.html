@@ -1,0 +1,169 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_blank">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Mein Malprogramm - XXL</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            margin: 0; 
+            overflow: hidden; /* Verhindert Scrollen auf der Seite */
+            display: flex; 
+            flex-direction: column; 
+            background: #f0f0f0; 
+        }
+        .toolbar { 
+            background: #333; 
+            color: white;
+            padding: 10px; 
+            display: flex; 
+            gap: 20px; 
+            align-items: center; 
+            justify-content: center;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        canvas { 
+            background: white; 
+            cursor: crosshair; 
+            display: block;
+        }
+        .colors { display: grid; grid-template-columns: repeat(8, 30px); gap: 5px; }
+        .color-btn { width: 30px; height: 30px; border: 2px solid #fff; cursor: pointer; border-radius: 4px; }
+        .active { outline: 3px solid #00ff00; border-color: transparent; }
+        .controls button { 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+        }
+        .btn-active { background: #00ff00; color: black; }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="controls">
+            <button id="brushBtn" class="btn-active">Pinsel</button>
+            <button id="eraserBtn">Radierer</button>
+        </div>
+        
+        <div class="colors" id="colorPalette"></div>
+        <div style="font-size: 0.8em;">Speichert automatisch!</div>
+    </div>
+
+    <canvas id="paintCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const colorPalette = document.getElementById('colorPalette');
+        const brushBtn = document.getElementById('brushBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+
+        let painting = false;
+        let color = '#000000';
+        let isEraser = false;
+
+        // Canvas Größe an das Fenster anpassen
+        function resizeCanvas() {
+            // Speichere das aktuelle Bild zwischen, bevor die Größe geändert wird
+            const tempImage = canvas.toDataURL();
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 60; // Abzug für Toolbar
+            
+            // Bild nach Größenänderung wieder einfügen
+            const img = new Image();
+            img.src = tempImage;
+            img.onload = () => ctx.drawImage(img, 0, 0);
+        }
+
+        // 16 Farben
+        const colors = [
+            '#000000', '#808080', '#800000', '#808000', '#008000', '#008080', '#000080', '#800080',
+            '#ffffff', '#c0c0c0', '#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff'
+        ];
+
+        colors.forEach(c => {
+            const btn = document.createElement('div');
+            btn.className = 'color-btn';
+            btn.style.backgroundColor = c;
+            btn.onclick = () => {
+                color = c;
+                isEraser = false;
+                updateUI(btn);
+            };
+            colorPalette.appendChild(btn);
+        });
+
+        function updateUI(activeColorBtn) {
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            if(activeColorBtn) activeColorBtn.classList.add('active');
+            brushBtn.className = !isEraser ? 'btn-active' : '';
+            eraserBtn.className = isEraser ? 'btn-active' : '';
+        }
+
+        // Speichern & Laden
+        function saveDrawing() {
+            localStorage.setItem('myDrawing', canvas.toDataURL());
+        }
+
+        function loadDrawing() {
+            const savedData = localStorage.getItem('myDrawing');
+            if (savedData) {
+                const img = new Image();
+                img.src = savedData;
+                img.onload = () => ctx.drawImage(img, 0, 0);
+            }
+        }
+
+        // Mal-Funktionen
+        function startPosition(e) {
+            painting = true;
+            draw(e);
+        }
+
+        function finishedPosition() {
+            painting = false;
+            ctx.beginPath();
+            saveDrawing(); // Speichert, sobald man den Pinsel absetzt
+        }
+
+        function draw(e) {
+            if (!painting) return;
+            ctx.lineWidth = isEraser ? 40 : 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = isEraser ? '#ffffff' : color;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        // Event Listener
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', finishedPosition);
+        canvas.addEventListener('mousemove', draw);
+
+        brushBtn.onclick = () => { isEraser = false; updateUI(); };
+        eraserBtn.onclick = () => { isEraser = true; updateUI(); };
+
+        // Initialisierung
+        resizeCanvas();
+        loadDrawing();
+    </script>
+</body>
+</html>

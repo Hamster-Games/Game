@@ -1,0 +1,224 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_blank">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Variabel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        h1 { margin-bottom: 10px; }
+        .controls { margin-bottom: 20px; }
+        
+        #grid {
+            display: grid;
+            gap: 10px;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .cell {
+            width: 80px;
+            height: 80px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 4px;
+        }
+        
+        .cell:hover { background-color: #e0e0e0; }
+        .cell.taken { cursor: not-allowed; }
+        .cell.x { color: #ff4757; }
+        .cell.o { color: #2ed573; }
+        
+        #status {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button:hover { background-color: #3742fa; }
+    </style>
+</head>
+<body>
+
+    <h1>Tic Tac Toe</h1>
+    
+    <div class="controls">
+        <label for="size">Rastergröße: </label>
+        <select id="sizeSelect">
+            <option value="3">3 x 3</option>
+            <option value="4">4 x 4</option>
+            <option value="5">5 x 5</option>
+            <option value="6">6 x 6</option>
+        </select>
+        <button onclick="resetGame()">Neues Spiel</button>
+    </div>
+
+    <div id="grid"></div>
+    <div id="status">Du bist dran (X)</div>
+
+    <script>
+        const gridElement = document.getElementById('grid');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const statusElement = document.getElementById('status');
+        
+        let size = 3;
+        let board = [];
+        let gameActive = true;
+        const winCondition = 3; // Immer 3 in einer Reihe
+
+        function initGame() {
+            size = parseInt(sizeSelect.value);
+            board = Array(size * size).fill(null);
+            gameActive = true;
+            statusElement.innerText = "Du bist dran (X)";
+            
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', handlePlayerMove);
+                gridElement.appendChild(cell);
+            }
+        }
+
+        function handlePlayerMove(e) {
+            const index = e.target.getAttribute('data-index');
+            
+            if (board[index] || !gameActive) return;
+
+            makeMove(index, 'X');
+
+            if (checkWin('X')) {
+                statusElement.innerText = "Sieg für dich!";
+                gameActive = false;
+            } else if (board.every(cell => cell !== null)) {
+                statusElement.innerText = "Unentschieden!";
+                gameActive = false;
+            } else {
+                statusElement.innerText = "Bot überlegt...";
+                gameActive = false; // Sperren während Bot "denkt"
+                setTimeout(botMove, 500);
+            }
+        }
+
+        function makeMove(index, player) {
+            board[index] = player;
+            const cell = gridElement.children[index];
+            cell.innerText = player;
+            cell.classList.add('taken', player.toLowerCase());
+        }
+
+        function botMove() {
+            if (!gameActive && board.every(cell => cell !== null)) return;
+
+            // Einfache Logik: 1. Gewinnen, 2. Blockieren, 3. Zufall
+            let move = findBestMove('O') || findBestMove('X') || randomMove();
+
+            if (move !== null) {
+                makeMove(move, 'O');
+                if (checkWin('O')) {
+                    statusElement.innerText = "Der Bot hat gewonnen!";
+                    gameActive = false;
+                    return;
+                }
+            }
+
+            if (board.every(cell => cell !== null) && gameActive) {
+                statusElement.innerText = "Unentschieden!";
+                gameActive = false;
+            } else if (gameActive === false && statusElement.innerText.indexOf('gewonnen') === -1) {
+                gameActive = true;
+                statusElement.innerText = "Du bist dran (X)";
+            }
+        }
+
+        function findBestMove(player) {
+            for (let i = 0; i < board.length; i++) {
+                if (!board[i]) {
+                    board[i] = player;
+                    if (checkWin(player)) {
+                        board[i] = null;
+                        return i;
+                    }
+                    board[i] = null;
+                }
+            }
+            return null;
+        }
+
+        function randomMove() {
+            const availableMoves = board.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
+            return availableMoves.length > 0 ? availableMoves[Math.floor(Math.random() * availableMoves.length)] : null;
+        }
+
+        function checkWin(player) {
+            // Hilfsfunktion: Prüft alle möglichen 3er Kombinationen im aktuellen Raster
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === player) {
+                    const row = Math.floor(i / size);
+                    const col = i % size;
+
+                    // Richtungen: [dx, dy] (Horizontal, Vertikal, Diagonal Rechts, Diagonal Links)
+                    const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+                    for (let [dx, dy] of directions) {
+                        let count = 1;
+                        for (let step = 1; step < winCondition; step++) {
+                            const newRow = row + (dy * step);
+                            const newCol = col + (dx * step);
+                            const nextIdx = newRow * size + newCol;
+
+                            if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size && board[nextIdx] === player) {
+                                count++;
+                            } else {
+                                break;
+                            }
+                        }
+                        if (count === winCondition) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // Start
+        initGame();
+    </script>
+</body>
+</html>

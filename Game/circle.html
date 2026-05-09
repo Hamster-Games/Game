@@ -1,0 +1,169 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_blank">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Circle</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+        #ui {
+            position: absolute;
+            top: 40px;
+            text-align: center;
+            pointer-events: none;
+        }
+        .score-display { font-size: 3rem; font-weight: 800; margin-bottom: 5px; }
+        .best-display { font-size: 1.2rem; color: #888; }
+        canvas {
+            background: #222;
+            border-radius: 50%;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="score-display"><span id="currentScore">0</span>%</div>
+        <div class="best-display">Rekord: <span id="highScore">0</span>%</div>
+    </div>
+
+    <div class="dot"></div>
+    <canvas id="circleCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('circleCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('currentScore');
+        const highscoreEl = document.getElementById('highScore');
+
+        let size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+        canvas.width = size;
+        canvas.height = size;
+        const centerX = size / 2;
+        const centerY = size / 2;
+        const targetRadius = size / 3;
+
+        let drawing = false;
+        let points = [];
+        let highscore = localStorage.getItem('perfectCircleBest') || 0;
+        highscoreEl.textContent = highscore;
+
+        function getDistance(x, y) {
+            return Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+        }
+
+        // Berechnet die Farbe basierend auf der Abweichung (0 = perfekt/grün, 50+ = schlecht/rot)
+        function getColor(dist) {
+            const deviation = Math.abs(dist - targetRadius);
+            const maxError = 60; // Ab 60 Pixel Abweichung ist es knallrot
+            const hue = Math.max(0, 120 - (deviation / maxError * 120)); 
+            return `hsl(${hue}, 100%, 50%)`;
+        }
+
+        function calculateFinalScore() {
+            if (points.length < 30) return 0;
+            let totalDev = 0;
+            points.forEach(p => totalDev += Math.abs(getDistance(p.x, p.y) - targetRadius));
+            let score = 100 - (totalDev / points.length / targetRadius * 250);
+            
+            // Check ob der Kreis geschlossen ist
+            const d = Math.sqrt(Math.pow(points[0].x - points[points.length-1].x, 2) + Math.pow(points[0].y - points[points.length-1].y, 2));
+            if (d > 60) score *= 0.5; 
+
+            return Math.max(0, score).toFixed(1);
+        }
+
+        function startDrawing(e) {
+            drawing = true;
+            points = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            scoreEl.textContent = "0.0";
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            const dist = getDistance(x, y);
+
+            if (points.length > 0) {
+                const lastPoint = points[points.length - 1];
+                ctx.beginPath();
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                // Hier passiert die Magie: Farbe ändert sich live
+                ctx.strokeStyle = getColor(dist);
+                ctx.moveTo(lastPoint.x, lastPoint.y);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            points.push({x, y});
+            
+            // Live-Score Update (leicht verzögert für Performance)
+            if (points.length % 5 === 0) {
+                scoreEl.textContent = calculateFinalScore();
+            }
+        }
+
+        function stopDrawing() {
+            if (!drawing) return;
+            drawing = false;
+
+            const finalScore = calculateFinalScore();
+            scoreEl.textContent = finalScore;
+
+            if (parseFloat(finalScore) > parseFloat(highscore)) {
+                highscore = finalScore;
+                highscoreEl.textContent = highscore;
+                localStorage.setItem('perfectCircleBest', highscore);
+            }
+        }
+
+        // Events
+        canvas.addEventListener('mousedown', startDrawing);
+        window.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); }, {passive: false});
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
+        window.addEventListener('touchend', stopDrawing);
+
+    </script>
+</body>
+</html>

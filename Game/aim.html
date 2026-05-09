@@ -1,0 +1,133 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_blank">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML5 Aim Trainer</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background-color: #eee;
+            border: 5px solid #444;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+        .target {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: red;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #ui {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        #highscore {
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        Punkte: <span id="score">0</span> | 
+        Zeit: <span id="timer">10</span>s | 
+        Rekord: <span id="highscore">0</span>
+    </div>
+
+    <div id="game-container" id="gameBoard">
+        </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const highscoreDisplay = document.getElementById('highscore');
+
+        let score = 0;
+        let timeLeft = 10;
+        let gameActive = true;
+        let highscore = localStorage.getItem('aimGameHighscore') || 0;
+
+        // Highscore initial anzeigen
+        highscoreDisplay.textContent = highscore;
+
+        function createTarget() {
+            // Altes Ziel entfernen
+            gameContainer.innerHTML = '';
+
+            if (!gameActive) return;
+
+            const target = document.createElement('div');
+            target.className = 'target';
+
+            // Zufällige Position berechnen
+            const x = Math.random() * (gameContainer.clientWidth - 40) + 20;
+            const y = Math.random() * (gameContainer.clientHeight - 40) + 20;
+
+            target.style.left = x + 'px';
+            target.style.top = y + 'px';
+
+            target.onclick = function() {
+                if (gameActive) {
+                    score++;
+                    scoreDisplay.textContent = score;
+                    createTarget();
+                }
+            };
+
+            gameContainer.appendChild(target);
+        }
+
+        // Timer-Intervall
+        const countdown = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                endGame();
+            }
+        }, 1000);
+
+        function endGame() {
+            gameActive = false;
+            gameContainer.innerHTML = '<h1 style="color: black; text-align: center; margin-top: 250px;">Zeit abgelaufen!</h1>';
+            
+            // Rekord prüfen und speichern
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('aimGameHighscore', highscore);
+                highscoreDisplay.textContent = highscore;
+                alert("Neuer Rekord: " + score);
+            } else {
+                alert("Spiel vorbei! Punkte: " + score);
+            }
+        }
+
+        // Spiel starten
+        createTarget();
+    </script>
+</body>
+</html>
