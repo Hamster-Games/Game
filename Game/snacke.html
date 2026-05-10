@@ -1,26 +1,88 @@
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="Hamster Games.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
-</a>
-</p>
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Snake Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Snake - Mobile & Desktop</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #111; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            touch-action: none; /* Verhindert Scrollen/Zoomen beim Spielen */
+        }
+
+        /* UI Styling */
+        #ui { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: white; 
+            pointer-events: none; 
+            z-index: 10; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
         canvas { display: block; }
+
+        /* --- MOBILE STEUERUNG --- */
+        #mobile-controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none; /* Standardmäßig aus (Desktop) */
+            grid-template-areas: 
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 28px;
+            user-select: none;
+            backdrop-filter: blur(5px);
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: auto;
+        }
+
+        .btn:active { 
+            background: rgba(255, 255, 255, 0.4); 
+            transform: scale(0.95);
+        }
+
+        /* Anzeige-Logik: Nur auf Touch-Geräten oder schmalen Bildschirmen */
+        @media (pointer: coarse), (max-width: 800px) {
+            #mobile-controls { display: grid; }
+            #ui p:nth-of-type(1) { display: none; } /* Tastatur-Info ausblenden */
+        }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <h1>3D Snake</h1>
-    <p>Steuerung: <b>Pfeiltasten</b> oder <b>WASD</b></p>
-    <p>Score: <span id="score">0</span></p>
+    <h1 style="margin:0;">3D Snake</h1>
+    <p>Steuerung: <b>WASD</b> oder <b>Pfeile</b></p>
+    <p>Score: <span id="score" style="font-weight:bold; color:#b8e114;">0</span></p>
+</div>
+
+<div id="mobile-controls">
+    <div class="btn" style="grid-area: up" id="btn-up">▲</div>
+    <div class="btn" style="grid-area: left" id="btn-left">◀</div>
+    <div class="btn" style="grid-area: right" id="btn-right">▶</div>
+    <div class="btn" style="grid-area: down" id="btn-down">▼</div>
 </div>
 
 <script type="importmap">
@@ -39,35 +101,49 @@
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
     // Licht
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 10, 7.5);
+    light.position.set(10, 20, 15);
     scene.add(light);
-    scene.add(new THREE.AmbientLight(0x404040));
+    scene.add(new THREE.AmbientLight(0x404040, 2));
 
-    // Spielfeld (Boden)
-    const gridSize = 40;
-    const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x00ff00, 0x0a12ff);
+    // Spielfeld
+    const gridSize = 30;
+    const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x444444, 0x222222);
     scene.add(gridHelper);
 
-    // --- SPIELLOGIK ---
+    // --- GAME VARIABLEN ---
     let snake = [];
     let snakeDir = { x: 1, z: 0 };
     let nextDir = { x: 1, z: 0 };
     let food;
     let score = 0;
-    const moveSpeed = 80; // Millisekunden pro Schritt
+    let isGameOver = false;
+    const moveSpeed = 130; 
 
     const cubeGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
     const snakeMat = new THREE.MeshStandardMaterial({ color: 0xb8e114 });
-    const foodMat = new THREE.MeshStandardMaterial({ color: 0xa50909 });
+    const foodMat = new THREE.MeshStandardMaterial({ color: 0xff0044 });
+
+    // --- FUNKTIONEN ---
+
+    function updateCamera() {
+        const isMobile = window.innerWidth < window.innerHeight;
+        if (isMobile) {
+            camera.position.set(0, 45, 15); // Höher für Handy
+        } else {
+            camera.position.set(0, 30, 15); // Flacher für Desktop
+        }
+        camera.lookAt(0, 0, 0);
+    }
 
     function initSnake() {
         for(let i = 0; i < 3; i++) {
             const part = new THREE.Mesh(cubeGeo, snakeMat);
-            part.position.set(-i, 1, 0);
+            part.position.set(-i + 0.5, 0.5, 0.5);
             snake.push(part);
             scene.add(part);
         }
@@ -76,64 +152,61 @@
     function spawnFood() {
         if (food) scene.remove(food);
         food = new THREE.Mesh(cubeGeo, foodMat);
-        food.position.set(
-            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5,
-            0.5,
-            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5
-        );
-        scene.add(food);
-
-        if (food) scene.remove(food);
-        food = new THREE.Mesh(cubeGeo, foodMat);
-        food.position.set(
-            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5,
-            0.5,
-            Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5
-        );
+        const x = Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5;
+        const z = Math.floor(Math.random() * gridSize) - gridSize/2 + 0.5;
+        food.position.set(x, 0.5, z);
         scene.add(food);
     }
 
-    initSnake();
-    spawnFood();
+    const setDirection = (dir) => {
+        if (dir === 'UP' && snakeDir.z === 0) nextDir = { x: 0, z: -1 };
+        if (dir === 'DOWN' && snakeDir.z === 0) nextDir = { x: 0, z: 1 };
+        if (dir === 'LEFT' && snakeDir.x === 0) nextDir = { x: -1, z: 0 };
+        if (dir === 'RIGHT' && snakeDir.x === 0) nextDir = { x: 1, z: 0 };
+    };
 
-     // Camera
-    camera.position.set(0, 35, 15);
-    camera.lookAt(0, 0, 0);
-
-    // Steuerung
+    // Steuerung Events
     window.addEventListener('keydown', (e) => {
         switch(e.key.toLowerCase()) {
-            case 'arrowup': case 'w': if(snakeDir.z === 0) nextDir = { x: 0, z: -1 }; break;
-            case 'arrowdown': case 's': if(snakeDir.z === 0) nextDir = { x: 0, z: 1 }; break;
-            case 'arrowleft': case 'a': if(snakeDir.x === 0) nextDir = { x: -1, z: 0 }; break;
-            case 'arrowright': case 'd': if(snakeDir.x === 0) nextDir = { x: 1, z: 0 }; break;
+            case 'arrowup': case 'w': setDirection('UP'); break;
+            case 'arrowdown': case 's': setDirection('DOWN'); break;
+            case 'arrowleft': case 'a': setDirection('LEFT'); break;
+            case 'arrowright': case 'd': setDirection('RIGHT'); break;
         }
     });
 
+    // Mobile Button Events
+    ['up', 'down', 'left', 'right'].forEach(d => {
+        document.getElementById(`btn-${d}`).addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            setDirection(d.toUpperCase());
+        });
+    });
+
     function update() {
+        if (isGameOver) return;
+
         snakeDir = nextDir;
         const head = snake[0].position.clone();
         head.x += snakeDir.x;
         head.z += snakeDir.z;
 
-        // Kollision mit Wand
+        // Wand Kollision
         if (Math.abs(head.x) > gridSize/2 || Math.abs(head.z) > gridSize/2) {
-            alert("Game over! Score: " + score);
-            location.reload();
+            gameOver();
             return;
         }
 
-        // Kollision mit sich selbst
+        // Selbst-Kollision
         for (let part of snake) {
             if (head.distanceTo(part.position) < 0.1) {
-                alert("Game Over!");
-                location.reload();
+                gameOver();
                 return;
             }
         }
 
-        // Essen checken
-        if (head.distanceTo(food.position) < 1) {
+        // Essen
+        if (head.distanceTo(food.position) < 0.8) {
             score++;
             document.getElementById('score').innerText = score;
             spawnFood();
@@ -150,6 +223,16 @@
         setTimeout(update, moveSpeed);
     }
 
+    function gameOver() {
+        isGameOver = true;
+        alert("Game Over! Score: " + score);
+        location.reload();
+    }
+
+    // Start
+    initSnake();
+    spawnFood();
+    updateCamera();
     update();
 
     function animate() {
@@ -158,11 +241,11 @@
     }
     animate();
 
-    // Resize Handling
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        updateCamera();
     });
 </script>
 </body>
