@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shooter</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
+        
+        /* UI Overlay */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            pointer-events: none;
+        }
+
+        .health-bar {
+            width: 250px;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.5);
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .fill { height: 100%; transition: width 0.1s; border-radius: 3px; }
+        #player-fill { background: #00d2ff; width: 100%; }
+        #bot-fill { background: #ff0055; width: 100%; }
+
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            border: 2px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        /* Menü Style */
+        #menu {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(15, 15, 15, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            color: white;
+            border: 1px solid #333;
+            min-width: 300px;
+        }
+
+        .setting-group { margin: 25px 0; }
+        
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: #aaa; }
+        
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        button {
+            padding: 12px 40px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #ff0055;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: 0.2s;
+            width: 100%;
+        }
+
+        button:hover { background: #ff4d88; transform: translateY(-2px); }
+        
+        .diff-label { display: flex; justify-content: space-between; font-size: 0.9em; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="crosshair"></div>
+
+    <div id="ui">
+        <div>PLAYER</div>
+        <div class="health-bar"><div id="player-fill" class="fill"></div></div>
+        <div>BOT</div>
+        <div class="health-bar"><div id="bot-fill" class="fill"></div></div>
+    </div>
+
+    <div id="menu">
+        <h1 id="status-text">3D SHOOTER</h1>
+        
+        <div class="setting-group">
+            <label for="diff-slider">SCHWIERIGKEIT</label>
+            <input type="range" id="diff-slider" min="1" max="20" value="3">
+            <div class="diff-label">
+                <span>Einfach</span>
+                <span id="diff-value" style="color: #ff0055; font-weight: bold;">Stufe 3</span>
+                <span>Sigma</span>
+            </div>
+        </div>
+
+        <button id="start-btn">JETZT STARTEN</button>
+        <p style="font-size: 0.7em; color: #666; margin-top: 15px;">ESC drücken für Menü | WASD & Maus</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // --- SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.Fog(0x0a0a0a, 5, 40);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const light = new THREE.PointLight(0xffffff, 50);
+        light.position.set(0, 10, 0);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x202020));
+
+        // Boden
+        const plane = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshStandardMaterial({ color: 0x151515 })
+        );
+        plane.rotation.x = -Math.PI / 2;
+        scene.add(plane);
+        const grid = new THREE.GridHelper(100, 40, 0xff0055, 0x222222);
+        scene.add(grid);
+
+        // --- BOT & SPIELER ---
+        let playerHP = 100, botHP = 100, gameActive = false;
+        const bullets = [];
+
+        // Bot (Ein schwebendes Prisma)
+        const bot = new THREE.Mesh(
+            new THREE.OctahedronGeometry(1, 0),
+            new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 0.5 })
+        );
+        bot.position.set(0, 1.5, -15);
+        scene.add(bot);
+
+        // --- DIFFICULTY SETTINGS ---
+        const diffSlider = document.getElementById('diff-slider');
+        const diffDisplay = document.getElementById('diff-value');
+        let botDamage = 5;
+        let botFireRate = 60; // Alle X Frames ein Schuss
+
+        diffSlider.oninput = () => {
+            diffDisplay.innerText = "Stufe " + diffSlider.value;
+            // Berechnung: Höhere Stufe = mehr Schaden, niedrigerer Intervall (schneller schießen)
+            botDamage = 2 + (diffSlider.value * 2); 
+            botFireRate = Math.max(10, 80 - (diffSlider.value * 7));
+        };
+
+        // --- CONTROLS ---
+        const controls = new PointerLockControls(camera, document.body);
+        const startBtn = document.getElementById('start-btn');
+        const menu = document.getElementById('menu');
+
+        startBtn.onclick = () => {
+            resetGame();
+            controls.lock();
+        };
+
+        controls.addEventListener('lock', () => { menu.style.display = 'none'; gameActive = true; });
+        controls.addEventListener('unlock', () => { menu.style.display = 'block'; gameActive = false; });
+
+        window.addEventListener('mousedown', () => {
+            if (controls.isLocked && gameActive) shoot(camera, true);
+        });
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function shoot(source, isPlayer) {
+            const dir = new THREE.Vector3();
+            if(isPlayer) {
+                camera.getWorldDirection(dir);
+            } else {
+                dir.subVectors(camera.position, source.position).normalize();
+            }
+
+            const bullet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 6, 6),
+                new THREE.MeshBasicMaterial({ color: isPlayer ? 0x00d2ff : 0xff0055 })
+            );
+            bullet.position.copy(source.position);
+            bullet.userData = { 
+                velocity: dir.multiplyScalar(0.6), 
+                isPlayer: isPlayer,
+                life: 100 
+            };
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
+
+        function resetGame() {
+            playerHP = 100; botHP = 100;
+            document.getElementById('player-fill').style.width = "100%";
+            document.getElementById('bot-fill').style.width = "100%";
+            document.getElementById('status-text').innerText = "Pause Menu";
+            camera.position.set(0, 1.6, 5);
+            bot.position.set(0, 1.5, -15);
+        }
+
+        let botShootTimer = 0;
+
+        // --- MAIN LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!gameActive) return;
+
+            // Bewegung
+            const moveSpeed = 0.12;
+            if (keys['KeyW']) controls.moveForward(moveSpeed);
+            if (keys['KeyS']) controls.moveForward(-moveSpeed);
+            if (keys['KeyA']) controls.moveRight(-moveSpeed);
+            if (keys['KeyD']) controls.moveRight(moveSpeed);
+
+            // Bot KI & Schwebe-Effekt
+            bot.position.y = 1.5 + Math.sin(Date.now() * 0.003) * 0.5;
+            const botStep = new THREE.Vector3().subVectors(camera.position, bot.position).normalize();
+            bot.position.x += botStep.x * 0.04;
+            bot.position.z += botStep.z * 0.04;
+            bot.rotation.y += 0.05;
+
+            // Bot Schießen basierend auf Schwierigkeit
+            botShootTimer++;
+            if (botShootTimer >= botFireRate) {
+                shoot(bot, false);
+                botShootTimer = 0;
+            }
+
+            // Projektile verarbeiten
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.position.add(b.userData.velocity);
+                b.userData.life--;
+
+                if (b.userData.isPlayer) {
+                    if (b.position.distanceTo(bot.position) < 1.2) {
+                        botHP -= 10;
+                        document.getElementById('bot-fill').style.width = Math.max(0, botHP) + "%";
+                        removeBullet(b, i);
+                    }
+                } else {
+                    if (b.position.distanceTo(camera.position) < 0.8) {
+                        playerHP -= botDamage; // Hier zählt der Damage-Regler!
+                        document.getElementById('player-fill').style.width = Math.max(0, playerHP) + "%";
+                        removeBullet(b, i);
+                    }
+                }
+
+                if (b.userData.life <= 0) removeBullet(b, i);
+            }
+
+            if (botHP <= 0 || playerHP <= 0) {
+                gameActive = false;
+                document.getElementById('status-text').innerText = botHP <= 0 ? "SIEG: BOT ZERSTÖRT" : "STATUS: ELIMINIERT";
+                startBtn.innerText = "ERNEUT VERSUCHEN";
+                controls.unlock();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function removeBullet(b, index) {
+            scene.remove(b);
+            bullets.splice(index, 1);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
