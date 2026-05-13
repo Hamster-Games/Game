@@ -3,101 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <title>Hamster Games</title>
-
     <link rel="icon" href="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/ewwdasdadw.png" type="image/png">
+
+    <style>
+        /* Das Start-Overlay */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(50, 50, 50, 0.95); /* Dunkelgrau */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #overlay h1 {
+            font-size: 3rem;
+            text-shadow: 2px 2px 10px black;
+        }
+
+        #overlay p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        /* Dein Website-Design */
+        body {
+            background-image: url('https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Screenshot%202026-05-09%20102756.png');
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-link {
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            color: red;
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        img {
+            border: 3px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        img:hover {
+            transform: scale(1.05);
+            border-color: red;
+        }
+    </style>
 </head>
 <body>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+    <div id="overlay" onclick="startApp()">
+        <h1>🐹 Hamster Games</h1>
+        <p>Klicken zum Starten & Musik aktivieren</p>
+    </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="snacke.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Snake%203d%20Bild.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+    <audio id="bg-music" loop>
+        <source src="Jungle hamstergames song.mp3" type="audio/mpeg">
+        <source src="Jungle hamstergames song.mp3" type="audio/mpeg">
+    </audio>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="Confusing Maze.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Confusing%20Maze%20Bild.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+    <div id="content">
+        <br><br><br>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="Chrome dino.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Crome%20dino%20auf%20Wish%20Bild.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="snacke.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Snake%203d%20Bild.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="Minefake.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/WhatsApp%20Image%202026-05-08%20at%2022.15.32.jpeg" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="Confusing Maze.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Confusing%20Maze%20Bild.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="auto.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Infinite_Speed_racer.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="Chrome dino.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Crome%20dino%20auf%20Wish%20Bild.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="minigolf.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Mini_golf.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="Minefake.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/WhatsApp%20Image%202026-05-08%20at%2022.15.32.jpeg" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="aim.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Aim_Tester.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="auto.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Infinite_Speed_racer.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="circle.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Draw_a_Perfekt_Circle.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="minigolf.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Mini_golf.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="tiktaktoe.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tic_Tac_Toe.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="aim.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Aim_Tester.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="tetris.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tetris.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="circle.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Draw_a_Perfekt_Circle.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="malprogramm.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Paint_Game.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="tiktaktoe.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tic_Tac_Toe.png" width="300" height="200">
+            </a>
+        </div>
 
-<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
-<a href="shoter.html" target="_blank">
-    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster_Shoter.png" alt="Beschreibung des Bildes" width="300" height="200">
-</a>
-</p>
+        <div class="game-link">
+            <a href="tetris.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tetris.png" width="300" height="200">
+            </a>
+        </div>
 
-<style>
-  body {
-    background-image: url('https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Screenshot%202026-05-09%20102756.png');
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    background-size: cover;
-  }
-</style>
+        <div class="game-link">
+            <a href="malprogramm.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Paint_Game.png" width="300" height="200">
+            </a>
+        </div>
+
+        <div class="game-link">
+            <a href="shoter.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster_Shoter.png" width="300" height="200">
+            </a>
+        </div>
+
+        <div class="game-link">
+            <a href="clicker.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Clicker_game.png" width="300" height="200">
+            </a>
+        </div>
+
+        <div class="game-link">
+            <a href="Chicken Bazookaa.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/ChickenBazookaa.png" width="300" height="200">
+            </a>
+        </div>
+
+        <div class="game-link">
+            <a href="Box-Bouncer.html" target="_self">
+                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/boxbouncer.png" width="300" height="200">
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function startApp() {
+            // Musik starten
+            const audio = document.getElementById('bg-music');
+            audio.play().catch(e => console.log("Audio Fehler:", e));
+
+            // Overlay entfernen
+            const overlay = document.getElementById('overlay');
+            overlay.style.transition = "opacity 0.5s";
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
+        }
+    </script>
 
 </body>
 </html>

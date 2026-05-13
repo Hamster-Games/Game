@@ -1,0 +1,206 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Chicken Bazookaa</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000000; font-family: 'Arial gray', sans-serif; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 15px; height: 15px; border: 2px solid white;
+            transform: translate(-50%, -50%); pointer-events: none;
+        }
+        #health-bar {
+            position: absolute; top: 20px; left: 20px;
+            font-size: 30px; color: red; background: rgba(0,0,0,0.8);
+            padding: 10px; border-radius: 10px; border: 2px solid red;
+        }
+        #damage-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.4); opacity: 0; pointer-events: none;
+        }
+        #game-over {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; background: rgba(100,0,0,0.9); padding: 50px;
+            display: none; text-align: center; border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="damage-overlay"></div>
+    <div id="health-bar">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
+    <div id="crosshair"></div>
+    <div id="game-over"><h1>AHHH TOT!!!</h1><button onclick="location.reload()">Nochmal!</button></div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        let health = 10;
+        let score = 0;
+        let canTakeDamage = true;
+        let isGameOver = false;
+        const chickens = [];
+        const rockets = [];
+        const keys = {};
+
+        // Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const pLight = new THREE.PointLight(0xffffff, 50);
+        pLight.position.set(0, 10, 0);
+        scene.add(pLight);
+
+        // Boden & Wände (Lane)
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(16, 100), new THREE.MeshStandardMaterial({color: 0x545454}));
+        ground.rotation.x = -Math.PI/2;
+        scene.add(ground);
+
+        // --- DAS TAFFE HUHN (Texture bleibt!) ---
+        function createChicken() {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 0.9), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
+            body.position.y = 0.5;
+            group.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
+            head.position.set(0, 0.85, 0.35);
+            group.add(head);
+            const comb = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.25, 0.4), new THREE.MeshStandardMaterial({color: 0xff0000}));
+            comb.position.set(0, 1.1, 0.3);
+            group.add(comb);
+            const beak = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.2), new THREE.MeshStandardMaterial({color: 0xff9900}));
+            beak.position.set(0, 0.8, 0.55);
+            group.add(beak);
+
+            group.position.set(Math.random()*14-7, 0, -45);
+            scene.add(group);
+            // SPEED ERHÖHT
+            return { mesh: group, speed: 0.15 + Math.random() * 0.1 };
+        }
+
+        for(let i=0; i<10; i++) chickens.push(createChicken());
+
+        // Steuerung
+        document.body.onclick = () => { if(!isGameOver) document.body.requestPointerLock(); };
+        document.addEventListener('keydown', e => keys[e.code] = true);
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        document.addEventListener('mousemove', e => {
+            if(document.pointerLockElement) {
+                camera.rotation.y -= e.movementX * 0.002;
+                camera.rotation.x -= e.movementY * 0.002;
+                camera.rotation.x = Math.max(-1.4, Math.min(1.4, camera.rotation.x));
+            }
+        });
+
+        // Schießen
+        document.addEventListener('mousedown', () => {
+            if(!document.pointerLockElement || isGameOver) return;
+            const rocket = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color: 0xffaa00}));
+            rocket.position.copy(camera.position).y -= 0.3;
+            const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+            rocket.userData.vel = dir.multiplyScalar(1.5);
+            scene.add(rocket);
+            rockets.push(rocket);
+        });
+
+        camera.position.set(0, 1.6, 5);
+        camera.rotation.order = 'YXZ';
+
+        // Schaden Funktion
+        function takeDamage() {
+            if (!canTakeDamage || isGameOver) return;
+            
+            health--;
+            canTakeDamage = false;
+            
+            // UI Update
+            document.getElementById('health-bar').innerText = "❤️".repeat(Math.max(0, health));
+            const overlay = document.getElementById('damage-overlay');
+            overlay.style.opacity = "1";
+            
+            if (health <= 0) {
+                isGameOver = true;
+                document.getElementById('game-over').style.display = 'block';
+                document.exitPointerLock();
+            }
+
+            // Nach 0.5 Sekunden wieder verwundbar
+            setTimeout(() => {
+                overlay.style.opacity = "0";
+                canTakeDamage = true;
+            }, 500);
+        }
+
+        function animate() {
+            if(isGameOver) return;
+            requestAnimationFrame(animate);
+
+            // Bewegung
+            if(document.pointerLockElement) {
+                const s = 0.2;
+                if(keys['KeyW']) camera.translateZ(-s);
+                if(keys['KeyS']) camera.translateZ(s);
+                if(keys['KeyA']) camera.translateX(-s);
+                if(keys['KeyD']) camera.translateX(s);
+                camera.position.y = 1.6;
+                camera.position.x = Math.min(7, Math.max(-7, camera.position.x));
+            }
+
+            // Hühner Logik
+            chickens.forEach(chObj => {
+                const ch = chObj.mesh;
+                
+                // Jagd-Modus
+                const toPlayer = new THREE.Vector3().subVectors(camera.position, ch.position);
+                toPlayer.y = 0;
+                const distance = toPlayer.length();
+                toPlayer.normalize();
+                
+                ch.position.add(toPlayer.multiplyScalar(chObj.speed));
+                ch.lookAt(camera.position.x, 0, camera.position.z);
+
+                // Watscheln
+                ch.rotation.z = Math.sin(Date.now() * 0.01) * 0.2;
+
+                // --- SCHADEN-CHECK (Radius-basiert) ---
+                if (distance < 1.4) {
+                    takeDamage();
+                    // Huhn prallt ab
+                    ch.position.z -= 10;
+                }
+            });
+
+            // Raketen
+            rockets.forEach((r, ri) => {
+                r.position.add(r.userData.vel);
+                chickens.forEach(chObj => {
+                    if(r.position.distanceTo(chObj.mesh.position) < 1.2) {
+                        chObj.mesh.position.set(Math.random()*14-7, 0, -45);
+                        chObj.speed += 0.01;
+                        scene.remove(r);
+                        rockets.splice(ri, 1);
+                    }
+                });
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
