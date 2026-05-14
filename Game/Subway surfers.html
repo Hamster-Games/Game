@@ -1,0 +1,173 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Hamster Surfer</title>
+    <style>
+        body { margin: 0; background: #001f3d; color: white; font-family: 'Arial', sans-serif; overflow: hidden; }
+        
+        /* UI */
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 1000; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 2px solid #ffd700; }
+        .score-val { color: #ffd700; font-weight: bold; font-size: 24px; }
+        .controls-hint { font-size: 12px; color: #ccc; margin-top: 5px; }
+
+        /* Welt Setup */
+        #container { width: 100vw; height: 100vh; perspective: 1000px; display: flex; justify-content: center; align-items: center; background: linear-gradient(#001f3d, #0074D9); }
+        #scene { position: relative; width: 400px; height: 700px; transform-style: preserve-3d; transform: rotateX(65deg); background: #222; }
+
+        /* 3D Box Grundgerüst */
+        .cube { position: absolute; transform-style: preserve-3d; width: 50px; height: 50px; transition: left 0.1s, transform 0.2s; }
+        .side { position: absolute; width: 100%; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .front  { transform: translateZ(25px); }
+        .back   { transform: rotateY(180deg) translateZ(25px); }
+        .right  { transform: rotateY(90deg) translateZ(25px); }
+        .left   { transform: rotateY(-90deg) translateZ(25px); }
+        .top    { transform: rotateX(90deg) translateZ(25px); }
+        .bottom { transform: rotateX(-90deg) translateZ(25px); }
+
+        /* Spieler & Animationen */
+        .player .side { background: #0074D9; }
+        .player.jumping { transform: translateZ(100px) !important; }
+        .player.ducking { transform: scaleZ(0.5) !important; }
+
+        /* Hindernis-Typen */
+        .obstacle .side { background: #FF4136; }
+        .high-bar .side { background: #FF851B; } /* Drunter durchducken */
+        .high-bar { transform: translateZ(60px); } /* Schwebt oben */
+
+        /* Münzen (Höher gespawnt) */
+        .coin-wrapper { position: absolute; transform-style: preserve-3d; width: 30px; height: 30px; transform: translateZ(40px); }
+        .coin { 
+            width: 30px; height: 30px; background: #FFDC00; border-radius: 50%; 
+            box-shadow: 0 0 20px #FFDC00; animation: spin 0.8s infinite linear; 
+        }
+        @keyframes spin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+
+        #road { position: absolute; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, #333, #333 40px, #444 40px, #444 80px); animation: move 0.4s infinite linear; }
+        @keyframes move { from { background-position: 0 0; } to { background-position: 0 80px; } }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    Coins: <span id="c" class="score-val">0</span> | Rekord: <span id="r" class="score-val">0</span>
+    <div class="controls-hint">Orange = Ducken | Rot = Springen</div>
+</div>
+
+<div id="container">
+    <div id="scene">
+        <div id="road"></div>
+        <div id="player" class="cube player" style="bottom: 50px; left: 175px; transform: translateZ(25px);">
+            <div class="side front"></div><div class="side back"></div>
+            <div class="side right"></div><div class="side left"></div>
+            <div class="side top"></div><div class="side bottom"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const scene = document.getElementById('scene');
+    const player = document.getElementById('player');
+    let coins = 0;
+    let record = localStorage.getItem('subway_v3_rec') || 0;
+    document.getElementById('r').innerText = record;
+
+    let lane = 1;
+    const lanePos = [50, 175, 300];
+    let active = true;
+    let isJumping = false;
+    let isDucking = false;
+
+    // Steuerung
+    document.addEventListener('keydown', e => {
+        if (!active) return;
+        
+        // Spurwechsel
+        if ((e.key === 'ArrowLeft' || e.key === 'a') && lane > 0) lane--;
+        if ((e.key === 'ArrowRight' || e.key === 'd') && lane < 2) lane++;
+        
+        // Springen
+        if (e.key === ' ' && !isJumping) {
+            isJumping = true;
+            player.classList.add('jumping');
+            setTimeout(() => { player.classList.remove('jumping'); isJumping = false; }, 600);
+        }
+
+        // Ducken
+        if (e.key === 'Shift' && !isDucking) {
+            isDucking = true;
+            player.classList.add('ducking');
+            setTimeout(() => { player.classList.remove('ducking'); isDucking = false; }, 600);
+        }
+
+        player.style.left = lanePos[lane] + 'px';
+    });
+
+    function createObj() {
+        if (!active) return;
+        const type = Math.random();
+        const l = Math.floor(Math.random() * 3);
+        const obj = document.createElement('div');
+        
+        let objType = 'obstacle'; // Standard: Drüberspringen
+        if (type > 0.7) objType = 'coin';
+        else if (type > 0.4) objType = 'high-bar'; // Drunter ducken
+
+        if(objType === 'coin') {
+            obj.className = 'coin-wrapper';
+            obj.innerHTML = '<div class="coin"></div>';
+        } else {
+            obj.className = 'cube ' + objType;
+            obj.innerHTML = '<div class="side front"></div><div class="side back"></div><div class="side right"></div><div class="side left"></div><div class="side top"></div><div class="side bottom"></div>';
+        }
+
+        obj.style.left = (lanePos[l] + (objType === 'coin' ? 10 : 0)) + 'px';
+        obj.style.top = '-100px';
+        scene.appendChild(obj);
+
+        let top = -100;
+        const loop = setInterval(() => {
+            if(!active) { clearInterval(loop); return; }
+            top += 8;
+            obj.style.top = top + 'px';
+
+            // Kollisions-Logik
+            if (top > 500 && top < 560 && l === lane) {
+                if (objType === 'coin') {
+                    coins++;
+                    document.getElementById('c').innerText = coins;
+                    if(coins > record) {
+                        record = coins;
+                        localStorage.setItem('subway_v3_rec', record);
+                        document.getElementById('r').innerText = record;
+                    }
+                    obj.remove();
+                    clearInterval(loop);
+                } 
+                else if (objType === 'obstacle' && !isJumping) {
+                    gameOver();
+                } 
+                else if (objType === 'high-bar' && !isDucking) {
+                    gameOver();
+                }
+            }
+            if (top > 750) { obj.remove(); clearInterval(loop); }
+        }, 20);
+    }
+
+    function gameOver() {
+        active = false;
+        alert("GAME OVER! Coins: " + coins);
+        location.reload();
+    }
+
+    setInterval(createObj, 900);
+</script>
+</body>
+</html>

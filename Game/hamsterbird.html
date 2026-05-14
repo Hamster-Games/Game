@@ -1,0 +1,215 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hamster Jump</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #4facfe;
+            touch-action: manipulation; /* Verhindert Zoom-Verzögerung */
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui">Score: 0</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
+
+let width, height;
+let frames = 0;
+let score = 0;
+let gameActive = true;
+
+const hamsterImg = new Image();
+hamsterImg.src = "https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/ewwdasdadw.png";
+
+// Anpassung an Bildschirmgröße
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const hamster = {
+    x: 50,
+    y: height / 2,
+    w: 60,
+    h: 50,
+    gravity: 0.25,
+    jump: 6,
+    velocity: 0,
+    
+    draw() {
+        ctx.save();
+        // Leichte Drehung basierend auf Geschwindigkeit
+        let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, this.velocity * 0.1));
+        ctx.translate(this.x + this.w/2, this.y + this.h/2);
+        ctx.rotate(rotation);
+        ctx.drawImage(hamsterImg, -this.w/2, -this.h/2, this.w, this.h);
+        ctx.restore();
+    },
+    
+    update() {
+        this.velocity += this.gravity;
+        this.y += this.velocity;
+        
+        if (this.y + this.h > height) {
+            this.y = height - this.h;
+            gameOver();
+        }
+        if (this.y < 0) this.y = 0;
+    },
+    
+    flap() {
+        this.velocity = -this.jump;
+    }
+};
+
+const pipes = {
+    position: [],
+    gap: 300,
+    width: 80,
+    speed: 10,
+    
+    draw() {
+        for(let i = 0; i < this.position.length; i++) {
+            let p = this.position[i];
+            
+            // Röhren-Design mit Gradient
+            let grad = ctx.createLinearGradient(p.x, 0, p.x + this.width, 0);
+            grad.addColorStop(0, '#2e7d32');
+            grad.addColorStop(0.3, '#4caf50');
+            grad.addColorStop(1, '#1b5e20');
+
+            ctx.fillStyle = grad;
+            
+            // Obere Röhre
+            ctx.fillRect(p.x, 0, this.width, p.y);
+            // Kante der oberen Röhre
+            ctx.fillRect(p.x - 5, p.y - 20, this.width + 10, 20);
+            
+            // Untere Röhre
+            ctx.fillRect(p.x, p.y + this.gap, this.width, height);
+            // Kante der unteren Röhre
+            ctx.fillRect(p.x - 5, p.y + this.gap, this.width + 10, 20);
+        }
+    },
+    
+    update() {
+        if (frames % 90 === 0) {
+            this.position.push({
+                x: width,
+                y: Math.random() * (height - 300) + 50
+            });
+        }
+        
+        for(let i = 0; i < this.position.length; i++) {
+            let p = this.position[i];
+            p.x -= this.speed;
+            
+            // Kollision
+            if (hamster.x + hamster.w - 10 > p.x && hamster.x + 10 < p.x + this.width) {
+                if (hamster.y + 10 < p.y || hamster.y + hamster.h - 10 > p.y + this.gap) {
+                    gameOver();
+                }
+            }
+            
+            if (p.x + this.width === Math.floor(hamster.x)) {
+                score++;
+                ui.innerHTML = `Score: ${score}`;
+            }
+            
+            if (p.x + this.width < 0) {
+                this.position.shift();
+            }
+        }
+    }
+};
+
+function gameOver() {
+    gameActive = false;
+}
+
+function resetGame() {
+    hamster.y = height / 2;
+    hamster.velocity = 0;
+    pipes.position = [];
+    score = 0;
+    ui.innerHTML = `Score: ${score}`;
+    frames = 0;
+    gameActive = true;
+    loop();
+}
+
+function loop() {
+    if (!gameActive) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.font = "bold 40px Arial";
+        ctx.fillText("HAMSTER TOT!", width/2, height/2);
+        ctx.font = "20px Arial";
+        ctx.fillText("Tippen zum Neustart", width/2, height/2 + 50);
+        return;
+    }
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    pipes.draw();
+    pipes.update();
+    hamster.draw();
+    hamster.update();
+    
+    frames++;
+    requestAnimationFrame(loop);
+}
+
+// Steuerung für PC und Mobile
+function handleAction(e) {
+    e.preventDefault();
+    if (!gameActive) resetGame();
+    else hamster.flap();
+}
+
+window.addEventListener("keydown", (e) => { if(e.code === "Space") handleAction(e); });
+canvas.addEventListener("touchstart", handleAction, {passive: false});
+canvas.addEventListener("mousedown", handleAction);
+
+hamsterImg.onload = () => loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>MineHamster</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f0f0; }
+        #grid { 
+            display: grid; 
+            grid-template-columns: repeat(10, 30px); 
+            grid-template-rows: repeat(10, 30px); 
+            gap: 2px; 
+            border: 5px solid #bbb;
+            background-color: #bbb;
+        }
+        .cell {
+            width: 30px; height: 30px;
+            background-color: #ddd;
+            border: 1px solid #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; cursor: pointer; user-select: none;
+        }
+        .cell.revealed { background-color: #eee; border: 1px solid #ccc; cursor: default; }
+        .cell.mine { background-color: red; }
+        .cell.flag { background-color: yellow; }
+        #status { margin: 20px; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+    <h1>Minesweeper</h1>
+    <div id="status">Linksklick: Aufdecken | Rechtsklick: Flagge</div>
+    <div id="grid"></div>
+    <button onclick="initGame()" style="margin-top: 20px; padding: 10px;">Neues Spiel</button>
+
+    <script>
+        const size = 10;
+        const minesCount = 15;
+        let grid = document.getElementById('grid');
+        let cells = [];
+
+        function initGame() {
+            grid.innerHTML = '';
+            cells = [];
+            document.getElementById('status').innerText = "Viel Glück!";
+            
+            // 1. Gitter erstellen
+            let bombPositions = new Set();
+            while(bombPositions.size < minesCount) {
+                bombPositions.add(Math.floor(Math.random() * size * size));
+            }
+
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.dataset.mine = bombPositions.has(i);
+                
+                // Rechtsklick für Flaggen
+                cell.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    if (!cell.classList.contains('revealed')) {
+                        cell.classList.toggle('flag');
+                    }
+                };
+
+                // Linksklick zum Aufdecken
+                cell.onclick = () => revealCell(cell);
+                
+                grid.appendChild(cell);
+                cells.push(cell);
+            }
+        }
+
+        function revealCell(cell) {
+            if (cell.classList.contains('revealed') || cell.classList.contains('flag')) return;
+
+            if (cell.dataset.mine === "true") {
+                gameOver(false);
+                return;
+            }
+
+            cell.classList.add('revealed');
+            const mineCount = countMines(parseInt(cell.dataset.index));
+            
+            if (mineCount > 0) {
+                cell.innerText = mineCount;
+            } else {
+                // Leeres Feld -> Nachbarn rekursiv aufdecken
+                const neighbors = getNeighbors(parseInt(cell.dataset.index));
+                neighbors.forEach(idx => revealCell(cells[idx]));
+            }
+
+            checkWin();
+        }
+
+        function getNeighbors(idx) {
+            const neighbors = [];
+            const row = Math.floor(idx / size);
+            const col = idx % size;
+
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const r = row + dr;
+                    const c = col + dc;
+                    if (r >= 0 && r < size && c >= 0 && c < size && !(dr === 0 && dc === 0)) {
+                        neighbors.push(r * size + c);
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        function countMines(idx) {
+            return getNeighbors(idx).filter(i => cells[i].dataset.mine === "true").length;
+        }
+
+        function gameOver(win) {
+            cells.forEach(cell => {
+                if (cell.dataset.mine === "true") {
+                    cell.classList.add('mine');
+                    cell.innerText = '💣';
+                }
+            });
+            document.getElementById('status').innerText = win ? "GEWONNEN! 🎉" : "BOOM! Game Over.";
+        }
+
+        function checkWin() {
+            const win = cells.every(cell => 
+                (cell.dataset.mine === "true" && !cell.classList.contains('revealed')) ||
+                (cell.dataset.mine === "false" && cell.classList.contains('revealed'))
+            );
+            if (win) gameOver(true);
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

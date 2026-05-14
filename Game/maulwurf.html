@@ -1,0 +1,200 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hau den Maulwurf</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #6eb5ff; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: white;
+            pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;
+        }
+        .stat { font-size: 24px; margin-bottom: 5px; }
+        #highscore { color: #ffd700; font-weight: bold; }
+        #instructions { font-size: 14px; opacity: 0.9; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <div class="stat" id="score">Punkte: 0</div>
+    <div class="stat" id="highscore">Rekord: 0</div>
+    <div id="instructions">Klicke die Maulwürfe!</div>
+</div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+
+    // --- SETUP ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x6eb5ff); 
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Licht
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(5, 10, 7.5);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x505050));
+
+    // Boden
+    const groundGeometry = new THREE.PlaneGeometry(25, 25);
+    const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x3b7d3f });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // --- SPIEL-LOGIK & HIGHSCORE ---
+    let score = 0;
+    let highscore = localStorage.getItem('moleHighscore') || 0;
+    document.getElementById('highscore').innerText = `Rekord: ${highscore}`;
+
+    const moles = [];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    class Mole {
+        constructor(x, z) {
+            this.group = new THREE.Group();
+            // Startposition deutlich tiefer (-1.5), um Glitching zu vermeiden
+            this.group.position.set(x, -1.5, z); 
+
+            // Körper
+            const bodyGeom = new THREE.CylinderGeometry(0.4, 0.45, 1.2, 32);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x7a5230 });
+            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            body.position.y = 0.6;
+            this.group.add(body);
+
+            // Augen
+            const eyeGeom = new THREE.SphereGeometry(0.06, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const e1 = new THREE.Mesh(eyeGeom, eyeMat);
+            e1.position.set(0.18, 1.0, 0.35);
+            const e2 = e1.clone();
+            e2.position.x = -0.18;
+            this.group.add(e1, e2);
+
+            // Nase
+            const noseGeom = new THREE.SphereGeometry(0.07, 8, 8);
+            const noseMat = new THREE.MeshBasicMaterial({ color: 0xffaaaa });
+            const nose = new THREE.Mesh(noseGeom, noseMat);
+            nose.position.set(0, 0.9, 0.45);
+            this.group.add(nose);
+
+            scene.add(this.group);
+            
+            this.active = false;
+            this.state = 'hidden'; // hidden, rising, visible, sinking
+            this.timer = Math.random() * 3000;
+        }
+
+        update(delta) {
+            if (this.state === 'hidden') {
+                this.timer -= delta;
+                if (this.timer <= 0) {
+                    this.state = 'rising';
+                }
+            } else if (this.state === 'rising') {
+                this.group.position.y += 0.04;
+                if (this.group.position.y >= 0) {
+                    this.group.position.y = 0;
+                    this.state = 'visible';
+                    this.timer = 800 + Math.random() * 1500;
+                }
+            } else if (this.state === 'visible') {
+                this.timer -= delta;
+                if (this.timer <= 0) this.state = 'sinking';
+            } else if (this.state === 'sinking') {
+                this.group.position.y -= 0.04;
+                if (this.group.position.y <= -1.5) {
+                    this.group.position.y = -1.5;
+                    this.state = 'hidden';
+                    this.timer = Math.random() * 4000;
+                }
+            }
+        }
+
+        hit() {
+            score++;
+            document.getElementById('score').innerText = `Punkte: ${score}`;
+            
+            // Highscore prüfen
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('moleHighscore', highscore);
+                document.getElementById('highscore').innerText = `Rekord: ${highscore}`;
+            }
+            
+            this.state = 'sinking';
+        }
+    }
+
+    // 3x3 Gitter erstellen
+    for (let x = -1; x <= 1; x++) {
+        for (let z = -1; z <= 1; z++) {
+            moles.push(new Mole(x * 3, z * 3));
+        }
+    }
+
+    camera.position.set(0, 7, 10);
+    camera.lookAt(0, 0, 0);
+
+    // --- KLICK-EVENT ---
+    window.addEventListener('mousedown', (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        if (intersects.length > 0) {
+            moles.forEach(m => {
+                // Prüfen ob getroffenes Objekt zum Maulwurf gehört
+                let obj = intersects[0].object;
+                while(obj) {
+                    if (obj === m.group) {
+                        if (m.state === 'visible' || m.state === 'rising') m.hit();
+                        break;
+                    }
+                    obj = obj.parent;
+                }
+            });
+        }
+    });
+
+    // Render Loop
+    let lastTime = 0;
+    function animate(time) {
+        const delta = time - lastTime;
+        lastTime = time;
+        moles.forEach(m => m.update(delta));
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>

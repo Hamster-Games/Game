@@ -1,0 +1,219 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>FrogHamster</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', sans-serif; }
+        #ui { 
+            position: absolute; top: 20px; left: 20px; 
+            color: white; background: rgba(0,0,0,0.8); 
+            padding: 15px; border-radius: 12px; border: 1px solid #444;
+            pointer-events: none; 
+        }
+        .stat { font-size: 20px; font-weight: bold; }
+        .label { font-size: 10px; text-transform: uppercase; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="label">Punkte</div>
+        <div id="score" class="stat">0</div>
+        <div class="label" style="margin-top:5px;">Rekord</div>
+        <div id="record" class="stat" style="color: #ffcc00;">0</div>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+        scene.fog = new THREE.Fog(0x1a1a1a, 8, 25);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(5, 15, 10);
+        scene.add(sun);
+
+        // --- MODEL BUILDER ---
+        function createRealisticFrog() {
+            const group = new THREE.Group();
+            const green = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
+            const white = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            const black = new THREE.MeshPhongMaterial({ color: 0x000000 });
+
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.7), green);
+            body.position.y = 0.25;
+            group.add(body);
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.4), green);
+            head.position.set(0, 0.45, -0.2);
+            group.add(head);
+
+            // Augen
+            const eyeGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+            const eyeL = new THREE.Mesh(eyeGeo, white);
+            eyeL.position.set(-0.2, 0.6, -0.25);
+            const pupilL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), black);
+            pupilL.position.set(-0.2, 0.65, -0.32);
+            
+            const eyeR = eyeL.clone(); eyeR.position.x = 0.2;
+            const pupilR = pupilL.clone(); pupilR.position.x = 0.2;
+            group.add(eyeL, eyeR, pupilL, pupilR);
+            return group;
+        }
+
+        function createRealisticCar() {
+            const group = new THREE.Group();
+            const carColor = new THREE.Color(`hsl(${Math.random() * 360}, 60%, 45%)`);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: carColor, shininess: 100 });
+            const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+
+            // Chassis
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.8), bodyMat);
+            base.position.y = 0.3;
+            group.add(base);
+
+            // Dach
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.7), bodyMat);
+            roof.position.set(-0.1, 0.7, 0);
+            group.add(roof);
+
+            // Räder
+            const wheelGeo = new THREE.BoxGeometry(0.35, 0.35, 0.2);
+            [ [0.4,0.2,0.42], [0.4,0.2,-0.42], [-0.4,0.2,0.42], [-0.4,0.2,-0.42] ].forEach(p => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.position.set(p[0], p[1], p[2]);
+                group.add(w);
+            });
+
+            // Scheinwerfer
+            const light = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.2), new THREE.MeshBasicMaterial({color: 0xffffcc}));
+            light.position.set(0.7, 0.4, 0.25);
+            group.add(light);
+            const light2 = light.clone(); light2.position.z = -0.25;
+            group.add(light2);
+
+            return group;
+        }
+
+        // --- SPIEL LOGIK ---
+        const frog = createRealisticFrog();
+        scene.add(frog);
+
+        let score = 0;
+        let highScore = localStorage.getItem('froggerHighScore') || 0;
+        document.getElementById('record').innerText = highScore;
+
+        const lanes = new Map();
+        const cars = [];
+        let targetPos = new THREE.Vector3(0, 0, 0);
+        let canMove = true;
+
+        function createLane(z) {
+            if (lanes.has(z)) return;
+            const isSafe = z >= -1 || Math.random() > 0.7;
+            const mesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(20, 1),
+                new THREE.MeshPhongMaterial({ color: isSafe ? 0x1d351d : 0x111111 })
+            );
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.z = z;
+            scene.add(mesh);
+            lanes.set(z, { isSafe });
+            if (!isSafe) spawnCar(z);
+        }
+
+        function spawnCar(z) {
+            const carObj = createRealisticCar();
+            const speed = (Math.random() * 0.05 + 0.04) * (Math.random() > 0.5 ? 1 : -1);
+            carObj.position.set(Math.random() * 10 - 5, 0, z);
+            if(speed < 0) carObj.rotation.y = Math.PI;
+            scene.add(carObj);
+            cars.push({ mesh: carObj, speed, z });
+        }
+
+        for(let i = -10; i < 5; i++) createLane(i);
+
+        // --- STEUERUNG (REPARIERT & FLÜSSIG) ---
+        window.addEventListener('keydown', (e) => {
+            if (!canMove) return;
+            const key = e.key.toLowerCase();
+            let moved = false;
+
+            if (key === 'w') { targetPos.z -= 1; frog.rotation.y = 0; moved = true; }
+            else if (key === 's') { targetPos.z += 1; frog.rotation.y = Math.PI; moved = true; }
+            else if (key === 'a') { targetPos.x -= 1; frog.rotation.y = Math.PI/2; moved = true; }
+            else if (key === 'd') { targetPos.x += 1; frog.rotation.y = -Math.PI/2; moved = true; }
+
+            if (moved) {
+                canMove = false;
+                setTimeout(() => { canMove = true; }, 160); // Kurzer Cooldown für flüssige Kette
+
+                const s = Math.floor(Math.abs(Math.min(0, targetPos.z)));
+                if(s > score) {
+                    score = s;
+                    document.getElementById('score').innerText = score;
+                    if(score > highScore) {
+                        highScore = score;
+                        localStorage.setItem('froggerHighScore', highScore);
+                        document.getElementById('record').innerText = highScore;
+                    }
+                }
+                for(let i = targetPos.z - 10; i < targetPos.z + 5; i++) createLane(Math.floor(i));
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Bewegung
+            frog.position.lerp(targetPos, 0.25);
+            const d = frog.position.distanceTo(targetPos);
+            frog.position.y = d > 0.05 ? Math.sin((1 - d) * Math.PI) * 0.5 : 0;
+
+            // Autos & Kollision
+            cars.forEach(c => {
+                c.mesh.position.x += c.speed;
+                if(c.mesh.position.x > 11) c.mesh.position.x = -11;
+                if(c.mesh.position.x < -11) c.mesh.position.x = 11;
+
+                if(Math.abs(c.z - frog.position.z) < 0.45 && Math.abs(c.mesh.position.x - frog.position.x) < 0.9) {
+                    location.reload(); 
+                }
+            });
+
+            // Kamera
+            camera.position.lerp(new THREE.Vector3(frog.position.x, 8, frog.position.z + 5), 0.1);
+            camera.lookAt(frog.position.x, 0, frog.position.z - 1);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
