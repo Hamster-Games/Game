@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster Stein Papier</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --text-color: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+        }
+
+        .game-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 { margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .choice-btn {
+            background: var(--glass-bg);
+            border: 2px solid transparent;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+
+        .result-area {
+            min-height: 100px;
+        }
+
+        #message {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #detail-msg {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .badge {
+            font-weight: bold;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Hamster = Schere</h1>
+    
+    <div class="scoreboard">
+        <div>Spieler: <span id="player-score">0</span></div>
+        <div>Computer: <span id="cpu-score">0</span></div>
+    </div>
+
+    <div class="choices">
+        <button class="choice-btn" onclick="play('🪨')">🪨</button>
+        <button class="choice-btn" onclick="play('📄')">📄</button>
+        <button class="choice-btn" onclick="play('🐹')">🐹</button>
+    </div>
+
+    <div class="result-area">
+        <div id="message">Wähle dein Symbol!</div>
+        <div id="detail-msg">Der Computer wartet auf dich...</div>
+    </div>
+</div>
+
+<script>
+    let playerScore = 0;
+    let cpuScore = 0;
+
+    const winConditions = {
+        '🪨': '🐹',
+        '📄': '🪨',
+        '🐹': '📄'
+    };
+
+    function play(playerChoice) {
+        const choices = ['🪨', '📄', '🐹'];
+        const cpuChoice = choices[Math.floor(Math.random() * 3)];
+        
+        const messageEl = document.getElementById('message');
+        const detailEl = document.getElementById('detail-msg');
+
+        if (playerChoice === cpuChoice) {
+            messageEl.innerText = "Unentschieden! 🤝";
+            detailEl.innerText = `Beide haben ${playerChoice} gewählt.`;
+        } else if (winConditions[playerChoice] === cpuChoice) {
+            messageEl.innerText = "Du gewinnst! 🎉";
+            detailEl.innerText = `${playerChoice} schlägt ${cpuChoice}`;
+            playerScore++;
+        } else {
+            messageEl.innerText = "Verloren! 💀";
+            detailEl.innerText = `${cpuChoice} schlägt ${playerChoice}`;
+            cpuScore++;
+        }
+
+        updateScoreboard();
+    }
+
+    function updateScoreboard() {
+        document.getElementById('player-score').innerText = playerScore;
+        document.getElementById('cpu-score').innerText = cpuScore;
+    }
+</script>
+
+</body>
+</html>
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>

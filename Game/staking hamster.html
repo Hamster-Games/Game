@@ -1,0 +1,443 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Tower Stacking Game</title>
+
+<style>
+    body{
+        margin:0;
+        overflow:hidden;
+        font-family:Arial, sans-serif;
+        background:#87ceeb;
+    }
+
+    #score{
+        position:absolute;
+        top:20px;
+        left:20px;
+        color:white;
+        font-size:32px;
+        font-weight:bold;
+        z-index:10;
+        text-shadow:2px 2px 5px rgba(0,0,0,0.5);
+    }
+
+    #info{
+        position:absolute;
+        top:65px;
+        left:20px;
+        color:white;
+        font-size:18px;
+        z-index:10;
+    }
+
+    #gameover{
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        background:rgba(0,0,0,0.85);
+        padding:35px;
+        border-radius:20px;
+        color:white;
+        text-align:center;
+        display:none;
+        z-index:100;
+    }
+
+    #gameover h1{
+        font-size:50px;
+        margin-bottom:15px;
+    }
+
+    button{
+        padding:14px 28px;
+        font-size:20px;
+        border:none;
+        border-radius:12px;
+        background:#ff9800;
+        color:white;
+        cursor:pointer;
+    }
+
+    button:hover{
+        background:#ffb300;
+    }
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+
+<div id="info">
+    Klicke oder drücke LEERTASTE zum Stapeln
+</div>
+
+<div id="gameover">
+    <h1>Game Over</h1>
+    <p>Score: <span id="finalScore">0</span></p>
+    <button id="restartBtn">Neustarten</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+
+let scene, camera, renderer;
+let stack = [];
+let movingBlock;
+
+let score = 0;
+let gameOver = false;
+
+let moveAxis = "x";
+let speed = 0.12;
+
+const BLOCK_HEIGHT = 1;
+
+init();
+animate();
+
+function init(){
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+
+    camera = new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+
+    camera.position.set(12,16,18);
+    camera.lookAt(0,0,0);
+
+    renderer = new THREE.WebGLRenderer({
+        antialias:true
+    });
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+
+    document.body.appendChild(renderer.domElement);
+
+    // Licht
+    const ambient = new THREE.AmbientLight(
+        0xffffff,
+        0.9
+    );
+
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(
+        0xffffff,
+        1
+    );
+
+    dirLight.position.set(10,20,10);
+
+    scene.add(dirLight);
+
+    // Boden
+    const ground = new THREE.Mesh(
+        new THREE.BoxGeometry(50,1,50),
+        new THREE.MeshStandardMaterial({
+            color:0x55aa55
+        })
+    );
+
+    ground.position.y = -1;
+
+    scene.add(ground);
+
+    // Basisblock
+    const base = createBlock(
+        8,
+        8,
+        0,
+        0x444444
+    );
+
+    stack.push(base);
+
+    // Erster beweglicher Block
+    movingBlock = createMovingBlock(
+        8,
+        8,
+        1
+    );
+}
+
+function createBlock(width, depth, y, color){
+
+    const geometry = new THREE.BoxGeometry(
+        width,
+        BLOCK_HEIGHT,
+        depth
+    );
+
+    const material = new THREE.MeshStandardMaterial({
+        color:color
+    });
+
+    const block = new THREE.Mesh(
+        geometry,
+        material
+    );
+
+    block.position.y = y;
+
+    scene.add(block);
+
+    block.userData = {
+        width,
+        depth
+    };
+
+    return block;
+}
+
+function createMovingBlock(width, depth, y){
+
+    const color = new THREE.Color(
+        Math.random(),
+        Math.random(),
+        Math.random()
+    );
+
+    const block = createBlock(
+        width,
+        depth,
+        y,
+        color
+    );
+
+    if(moveAxis === "x"){
+        block.position.x = -12;
+    } else {
+        block.position.z = -12;
+    }
+
+    block.userData.direction = 1;
+    block.userData.axis = moveAxis;
+
+    return block;
+}
+
+function placeBlock(){
+
+    if(gameOver) return;
+
+    const topBlock = stack[stack.length - 1];
+
+    const axis = movingBlock.userData.axis;
+
+    let overlap;
+
+    if(axis === "x"){
+
+        overlap =
+            Math.min(
+                movingBlock.position.x +
+                movingBlock.userData.width / 2,
+
+                topBlock.position.x +
+                topBlock.userData.width / 2
+            )
+
+            -
+
+            Math.max(
+                movingBlock.position.x -
+                movingBlock.userData.width / 2,
+
+                topBlock.position.x -
+                topBlock.userData.width / 2
+            );
+
+    } else {
+
+        overlap =
+            Math.min(
+                movingBlock.position.z +
+                movingBlock.userData.depth / 2,
+
+                topBlock.position.z +
+                topBlock.userData.depth / 2
+            )
+
+            -
+
+            Math.max(
+                movingBlock.position.z -
+                movingBlock.userData.depth / 2,
+
+                topBlock.position.z -
+                topBlock.userData.depth / 2
+            );
+    }
+
+    // Verloren
+    if(overlap <= 0){
+
+        gameOver = true;
+
+        document.getElementById("finalScore")
+            .innerText = score;
+
+        document.getElementById("gameover")
+            .style.display = "block";
+
+        return;
+    }
+
+    // Block zuschneiden
+    if(axis === "x"){
+
+        movingBlock.scale.x =
+            overlap / movingBlock.userData.width;
+
+        movingBlock.userData.width = overlap;
+
+        movingBlock.position.x =
+            (movingBlock.position.x +
+            topBlock.position.x) / 2;
+
+    } else {
+
+        movingBlock.scale.z =
+            overlap / movingBlock.userData.depth;
+
+        movingBlock.userData.depth = overlap;
+
+        movingBlock.position.z =
+            (movingBlock.position.z +
+            topBlock.position.z) / 2;
+    }
+
+    stack.push(movingBlock);
+
+    score++;
+
+    document.getElementById("score")
+        .innerText = "Score: " + score;
+
+    // 5% schneller
+    speed *= 1.05;
+
+    // Kamera hoch
+    camera.position.y += 1;
+
+    camera.lookAt(
+        0,
+        score / 2,
+        0
+    );
+
+    // Achse wechseln
+    moveAxis =
+        moveAxis === "x"
+        ? "z"
+        : "x";
+
+    movingBlock = createMovingBlock(
+        movingBlock.userData.width,
+        movingBlock.userData.depth,
+        stack.length
+    );
+}
+
+function animate(){
+
+    requestAnimationFrame(animate);
+
+    if(movingBlock && !gameOver){
+
+        const axis = movingBlock.userData.axis;
+
+        if(axis === "x"){
+
+            movingBlock.position.x +=
+                speed *
+                movingBlock.userData.direction;
+
+            if(movingBlock.position.x > 12){
+                movingBlock.userData.direction = -1;
+            }
+
+            if(movingBlock.position.x < -12){
+                movingBlock.userData.direction = 1;
+            }
+
+        } else {
+
+            movingBlock.position.z +=
+                speed *
+                movingBlock.userData.direction;
+
+            if(movingBlock.position.z > 12){
+                movingBlock.userData.direction = -1;
+            }
+
+            if(movingBlock.position.z < -12){
+                movingBlock.userData.direction = 1;
+            }
+        }
+    }
+
+    renderer.render(scene,camera);
+}
+
+// Klick
+window.addEventListener("click", ()=>{
+
+    if(!gameOver){
+        placeBlock();
+    }
+});
+
+// Leertaste
+window.addEventListener("keydown",(e)=>{
+
+    if(e.code === "Space"){
+        placeBlock();
+    }
+});
+
+// Neustart lädt Website neu
+document.getElementById("restartBtn")
+.addEventListener("click", ()=>{
+
+    location.reload();
+
+});
+
+// Resize
+window.addEventListener("resize", ()=>{
+
+    camera.aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+    );
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,212 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Hamster Man</title>
+    <style>
+        body {
+            background-color: #050505;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        #game-container { perspective: 800px; position: relative; }
+        canvas {
+            background: #000;
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.3);
+            transform: rotateX(20deg);
+            border: 2px solid #111;
+        }
+        .stats { font-size: 24px; margin-bottom: 10px; color: #ffff00; text-shadow: 0 0 10px #ffff00; }
+        
+        /* Overlay für Win/Loss */
+        #overlay {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.85);
+            padding: 40px;
+            border: 4px solid #00ffcc;
+            box-shadow: 0 0 30px #00ffcc;
+            z-index: 10;
+        }
+        #overlay h2 { margin: 0; font-size: 48px; color: #00ffcc; text-shadow: 0 0 20px #00ffcc; }
+        #overlay p { font-size: 20px; margin: 20px 0; }
+        button {
+            background: #00ffcc; border: none; padding: 10px 20px;
+            font-family: 'Courier New', monospace; font-weight: bold;
+            cursor: pointer; font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="stats">SCORE: <span id="score">0</span></div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay">
+            <h2 id="status-text">GESCHAFFT!</h2>
+            <p>...</p>
+            <button onclick="location.reload()">NOCHMAL SPIELEN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+        const overlay = document.getElementById("overlay");
+        const statusText = document.getElementById("status-text");
+
+        const TILE_SIZE = 30;
+        let gameActive = true;
+        let score = 0;
+
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,2,1,2,1,1,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,2,1,1,2,1,1,2,1,0,1,1,1,1],
+            [2,2,2,2,0,2,2,1,2,2,2,1,2,2,0,2,2,2,2],
+            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
+            [2,2,2,1,0,1,2,2,2,2,2,2,2,1,0,1,2,2,2],
+            [1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,1,0,0,0,0,0,2,0,0,0,0,0,1,0,0,1],
+            [1,1,0,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        canvas.width = map[0].length * TILE_SIZE;
+        canvas.height = map.length * TILE_SIZE;
+
+        const pacman = { x: 9, y: 15, dirX: 0, dirY: 0, nextDirX: 0, nextDirY: 0, mouth: 0 };
+        const ghosts = [
+            { x: 9, y: 9, color: "#ff0000", dirX: 1, dirY: 0 },
+            { x: 1, y: 1, color: "#ffb8ff", dirX: 0, dirY: 1 },
+            { x: 17, y: 17, color: "#00ffff", dirX: -1, dirY: 0 }
+        ];
+
+        window.addEventListener("keydown", (e) => {
+            const key = e.key.toLowerCase();
+            if (key === "w") { pacman.nextDirX = 0; pacman.nextDirY = -1; }
+            if (key === "s") { pacman.nextDirX = 0; pacman.nextDirY = 1; }
+            if (key === "a") { pacman.nextDirX = -1; pacman.nextDirY = 0; }
+            if (key === "d") { pacman.nextDirX = 1; pacman.nextDirY = 0; }
+        });
+
+        function isWall(x, y) {
+            if (y < 0 || y >= map.length || x < 0 || x >= map[0].length) return true;
+            return map[y][x] === 1;
+        }
+
+        function checkWin() {
+            // Prüfen ob noch irgendwo eine '0' (Punkt) in der Map ist
+            const dotsLeft = map.some(row => row.includes(0));
+            if (!dotsLeft) {
+                gameActive = false;
+                statusText.innerText = "GESCHAFFT!";
+                statusText.style.color = "#00ffcc";
+                overlay.style.display = "block";
+            }
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Logik für Einrasten und Steuerung
+            if (!isWall(pacman.x + pacman.nextDirX, pacman.y + pacman.nextDirY)) {
+                pacman.dirX = pacman.nextDirX;
+                pacman.dirY = pacman.nextDirY;
+            }
+
+            if (!isWall(pacman.x + pacman.dirX, pacman.y + pacman.dirY)) {
+                pacman.x += pacman.dirX;
+                pacman.y += pacman.dirY;
+            }
+
+            // Essen
+            if (map[pacman.y][pacman.x] === 0) {
+                map[pacman.y][pacman.x] = 2;
+                score += 10;
+                scoreElement.innerText = score;
+                checkWin();
+            }
+
+            // Geister
+            ghosts.forEach(g => {
+                if (isWall(g.x + g.dirX, g.y + g.dirY) || Math.random() < 0.1) {
+                    const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+                    const valid = dirs.filter(d => !isWall(g.x + d.x, g.y + d.y));
+                    const n = valid[Math.floor(Math.random() * valid.length)];
+                    g.dirX = n.x; g.dirY = n.y;
+                }
+                g.x += g.dirX; g.y += g.dirY;
+                if (g.x === pacman.x && g.y === pacman.y) {
+                    gameActive = false;
+                    statusText.innerText = "GAME OVER";
+                    statusText.style.color = "#ff0044";
+                    overlay.style.display = "block";
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Map
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    const px = x * TILE_SIZE, py = y * TILE_SIZE;
+                    if (map[y][x] === 1) {
+                        ctx.shadowBlur = 10; ctx.shadowColor = "#2222ff";
+                        ctx.strokeStyle = "#0000ff"; ctx.strokeRect(px+5, py+5, TILE_SIZE-10, TILE_SIZE-10);
+                    } else if (map[y][x] === 0) {
+                        ctx.shadowBlur = 0; ctx.fillStyle = "#fff";
+                        ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, 2, 0, 7); ctx.fill();
+                    }
+                }
+            }
+
+            // Pacman & Geister
+            const drawEnt = (x, y, col, isP) => {
+                ctx.shadowBlur = 15; ctx.shadowColor = col; ctx.fillStyle = col;
+                ctx.beginPath();
+                const cx = x * TILE_SIZE + TILE_SIZE/2, cy = y * TILE_SIZE + TILE_SIZE/2;
+                ctx.arc(cx, cy, 12, isP ? 0.2 : 0, isP ? 6.1 : Math.PI, false);
+                if (!isP) { ctx.lineTo(cx+12, cy+12); ctx.lineTo(cx-12, cy+12); }
+                ctx.fill();
+            };
+
+            drawEnt(pacman.x, pacman.y, "#ffff00", true);
+            ghosts.forEach(g => drawEnt(g.x, g.y, g.color, false));
+
+            if (gameActive) {
+                update();
+                setTimeout(draw, 120);
+            }
+        }
+        draw();
+    </script>
+</body>
+</html>
