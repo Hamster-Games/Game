@@ -1,0 +1,185 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Format Bildkonverter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { text-align: center; color: #2c3e50; font-size: 24px; }
+        .drop-zone {
+            border: 2px dashed #3498db;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #eef2f7;
+            transition: 0.3s;
+        }
+        .drop-zone:hover { background: #e1e8f0; }
+        .settings { margin: 20px 0; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; }
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover { background: #27ae60; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bildkonverter</h1>
+    
+    <div class="drop-zone" id="dropZone">
+        <p>Datei hierher ziehen oder klicken zum Auswählen</p>
+        <input type="file" id="fileInput" accept="image/*,.heic,.heif,.tiff,.bmp" style="display: none;">
+        <span id="fileName" style="color: #7f8c8d; font-size: 14px;"></span>
+    </div>
+
+    <div class="settings">
+        <label for="formatSelect">Zielformat wählen:</label>
+        <select id="formatSelect">
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/png">PNG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/bmp">BMP</option>
+        </select>
+    </div>
+
+    <button id="convertBtn" disabled>Jetzt konvertieren & herunterladen</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const convertBtn = document.getElementById('convertBtn');
+    const formatSelect = document.getElementById('formatSelect');
+    const status = document.getElementById('status');
+
+    let loadedFile = null;
+
+    // Klick auf Dropzone triggert das versteckte Input-Feld
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', handleFileSelect);
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        loadedFile = file;
+        fileName.textContent = `Ausgewählt: ${file.name}`;
+        convertBtn.disabled = false;
+        status.textContent = "";
+    }
+
+    convertBtn.addEventListener('click', async () => {
+        if (!loadedFile) return;
+
+        status.style.color = "#3498db";
+        status.textContent = "Verarbeite Datei...";
+        convertBtn.disabled = true;
+
+        try {
+            let imageBlob = loadedFile;
+
+            // Spezialfall: HEIC/HEIF vorab in ein lesbares Format umwandeln
+            if (loadedFile.name.toLowerCase().endsWith('.heic') || loadedFile.name.toLowerCase().endsWith('.heif')) {
+                status.textContent = "HEIC wird konvertiert (kann kurz dauern)...";
+                const convertedHeic = await heic2any({
+                    blob: loadedFile,
+                    toType: "image/jpeg"
+                });
+                imageBlob = Array.isArray(convertedHeic) ? convertedHeic[0] : convertedHeic;
+            }
+
+            // Bild in ein HTML-Image-Objekt laden
+            const url = URL.createObjectURL(imageBlob);
+            const img = new Image();
+            
+            img.onload = function() {
+                // Canvas erstellen und Bild zeichnen
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                // In das gewählte Zielformat exportieren
+                const targetMime = formatSelect.value;
+                const extension = targetMime.split('/')[1];
+                
+                canvas.toBlob((blob) => {
+                    // Download-Link generieren und klicken
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = loadedFile.name.substring(0, loadedFile.name.lastIndexOf('.')) + '.' + extension;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    status.style.color = "#2ecc71";
+                    status.textContent = "Erfolgreich konvertiert!";
+                    convertBtn.disabled = false;
+                }, targetMime, 0.9); // 0.9 ist die Qualität für JPEG/WebP
+            };
+
+            img.onerror = function() {
+                throw new Error("Format wird vom Browser nicht unterstützt.");
+            };
+
+            img.src = url;
+
+        } catch (error) {
+            status.style.color = "#e74c3c";
+            status.textContent = "Fehler: Format nicht unterstützt.";
+            convertBtn.disabled = false;
+            console.error(error);
+        }
+    });
+</script>
+
+</body>
+</html>

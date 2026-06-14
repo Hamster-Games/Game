@@ -1,0 +1,918 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Inkscape App (Bezier & Paint Bucket Fixed)</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --panel-color: #2d2d2d;
+            --border-color: #444444;
+            --text-color: #e0e0e0;
+            --accent-color: #007acc;
+            --accent-hover: #0098ff;
+            --active-color: #1f5ca3;
+            --danger-color: #ff4d4d;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .menu-bar {
+            background-color: var(--panel-color);
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            z-index: 10;
+        }
+
+        .menu-item {
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .menu-item:hover {
+            background-color: var(--border-color);
+            color: #fff;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 4px;
+            background: #111;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .history-btn {
+            background: var(--panel-color);
+            border: none;
+            color: white;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .history-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: transparent;
+        }
+
+        .history-btn:not(:disabled):hover {
+            background: var(--accent-color);
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 5px;
+            margin-left: auto;
+            background: #111;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .zoom-btn {
+            background: var(--panel-color);
+            border: none;
+            color: white;
+            padding: 3px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--accent-color);
+        }
+
+        #importInput, #imageInput { display: none; }
+
+        .context-bar {
+            background-color: var(--panel-color);
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 13px;
+            min-height: 30px;
+        }
+
+        .tool-param {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-param input[type="number"] {
+            background: #111;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .tool-param input[type="color"] {
+            border: none;
+            width: 26px;
+            height: 26px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toolbox {
+            background-color: var(--panel-color);
+            width: 54px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 0;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .tool-btn {
+            width: 38px;
+            height: 38px;
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background-color: rgba(255,255,255,0.08);
+            transform: scale(1.05);
+        }
+
+        .tool-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--active-color);
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 122, 204, 0.5);
+        }
+
+        .workspace {
+            flex: 1;
+            background-color: #141414;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            position: relative;
+            padding: 40px;
+        }
+
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+            transform-origin: center center;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        canvas {
+            background-color: #ffffff;
+            cursor: default;
+            display: block;
+        }
+
+        .layers-panel {
+            width: 260px;
+            background-color: var(--panel-color);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+        }
+
+        .layers-header {
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.1);
+            letter-spacing: 0.5px;
+        }
+
+        .layers-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .layer-item:hover {
+            background: rgba(255,255,255,0.07);
+        }
+
+        .layer-item.selected {
+            background: rgba(0, 122, 204, 0.15);
+            border-color: var(--accent-color);
+        }
+
+        .layer-icon {
+            margin-right: 10px;
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .layer-name {
+            font-size: 12px;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #ccc;
+        }
+
+        .layer-item.selected .layer-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .layer-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .layer-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .layer-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .layer-btn.delete-btn:hover {
+            color: var(--danger-color);
+            background: rgba(255, 77, 77, 0.1);
+        }
+
+        .status-bar {
+            background-color: var(--panel-color);
+            border-top: 1px solid var(--border-color);
+            padding: 6px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            color: #aaa;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="menu-bar">
+        <div class="menu-item" id="menuNew">Neu</div>
+        <div class="menu-item" id="menuImport">Projekt öffnen (JSON)</div>
+        <div class="menu-item" id="menuExport">Projekt speichern (JSON)</div>
+        <div class="menu-item" id="menuInsertImage" style="font-weight: bold; color: #4af2a1;">🖼️ Bild einfügen</div>
+        <div class="menu-item" id="menuExportPNG">Als PNG exportieren</div>
+        
+        <div class="history-controls">
+            <button class="history-btn" id="btnUndo" title="Rückgängig (Strg+Z)" disabled>↩️ Rückgängig</button>
+            <button class="history-btn" id="btnRedo" title="Wiederherstellen (Strg+Y)" disabled>↪️ Vor</button>
+        </div>
+
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="btnZoomIn">➕ Zoom In</button>
+            <button class="zoom-btn" id="btnZoomOut">➖ Zoom Out</button>
+            <button class="zoom-btn" id="btnZoomReset">100%</button>
+        </div>
+
+        <input type="file" id="importInput" accept=".json">
+        <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp">
+    </div>
+
+    <div class="context-bar">
+        <div class="tool-param">
+            <label>Füllung:</label>
+            <input type="color" id="fillColor" value="#007acc">
+        </div>
+        <div class="tool-param">
+            <label>Kontur:</label>
+            <input type="color" id="strokeColor" value="#ffffff">
+        </div>
+        <div class="tool-param">
+            <label>Dicke:</label>
+            <input type="number" id="strokeWidth" min="1" max="100" value="3" style="width: 50px;">
+        </div>
+        <div style="border-left: 1px solid var(--border-color); height: 20px; margin: 0 10px;"></div>
+        <span id="activeToolText" style="font-style: italic; color: #aaa;">Aktives Werkzeug: Objekt-Auswahl</span>
+    </div>
+
+    <div class="main-container">
+        <div class="toolbox">
+            <button class="tool-btn active" id="toolSelect" title="Objekt-Auswahl (S)">⬛</button>
+            <button class="tool-btn" id="toolCrop" title="Ausschnitt wählen (C)">✂️</button>
+            <button class="tool-btn" id="toolPencil" title="Freihand-Pinsel (P)">✏️</button>
+            <button class="tool-btn" id="toolBezier" title="Bezier-Kurven (B)">🖋️</button>
+            <button class="tool-btn" id="toolLine" title="Linie (L)">╱</button>
+            <button class="tool-btn" id="toolRect" title="Rechteck (R)">▮</button>
+            <button class="tool-btn" id="toolCircle" title="Kreis (C)">⚪</button>
+            <button class="tool-btn" id="toolStar" title="Stern (S)">⭐</button>
+            <button class="tool-btn" id="toolFill" title="Fülleimer (F)">🪣</button>
+            <button class="tool-btn" id="toolEraser" title="Radierer (E)">🧹</button>
+        </div>
+
+        <div class="workspace">
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="paintCanvas" width="800" height="550"></canvas>
+            </div>
+        </div>
+
+        <div class="layers-panel">
+            <div class="layers-header">Ebenen & Objekte</div>
+            <div class="layers-list" id="layersList"></div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="statusInfo">Bereit | Drücke ENTER um einen offenen Bezier-Pfad zu beenden.</span>
+        <div>
+            <span id="zoomDisplay" style="margin-right: 15px; color: #007acc; font-weight: bold;">Zoom: 100%</span>
+            <span id="mouseCoords">X: 0, Y: 0</span>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const layersList = document.getElementById('layersList');
+
+        const fillColorInput = document.getElementById('fillColor');
+        const strokeColorInput = document.getElementById('strokeColor');
+        const strokeWidthInput = document.getElementById('strokeWidth');
+        const activeToolText = document.getElementById('activeToolText');
+        const mouseCoords = document.getElementById('mouseCoords');
+        const statusInfo = document.getElementById('statusInfo');
+        const zoomDisplay = document.getElementById('zoomDisplay');
+        const importInput = document.getElementById('importInput');
+        const imageInput = document.getElementById('imageInput');
+
+        const btnUndo = document.getElementById('btnUndo');
+        const btnRedo = document.getElementById('btnRedo');
+
+        const tools = {
+            select: document.getElementById('toolSelect'),
+            crop: document.getElementById('toolCrop'),
+            pencil: document.getElementById('toolPencil'),
+            bezier: document.getElementById('toolBezier'),
+            line: document.getElementById('toolLine'),
+            rect: document.getElementById('toolRect'),
+            circle: document.getElementById('toolCircle'),
+            star: document.getElementById('toolStar'),
+            fill: document.getElementById('toolFill'),
+            eraser: document.getElementById('toolEraser')
+        };
+
+        let currentTool = 'select';
+        let isDrawing = false;
+        let startX = 0, startY = 0;
+        let currentX = 0, currentY = 0;
+
+        let shapes = []; 
+        let currentPath = [];
+        let bezierNodes = [];
+        let isDraggingBezier = false;
+
+        let selectedShape = null;
+        let isDraggingShape = false;
+        let dragOffsetX = 0, dragOffsetY = 0;
+        let isSelectingCrop = false;
+
+        let isCtrlPressed = false;
+        let isShiftPressed = false;
+        let imageCache = {};
+        let zoomLevel = 1.0;
+
+        let undoStack = [];
+        let redoStack = [];
+
+        function saveHistoryState() {
+            undoStack.push(JSON.stringify(shapes));
+            redoStack = []; 
+            updateHistoryButtons();
+        }
+
+        function updateHistoryButtons() {
+            btnUndo.disabled = undoStack.length === 0;
+            btnRedo.disabled = redoStack.length === 0;
+        }
+
+        function triggerUndo() {
+            if (undoStack.length === 0) return;
+            redoStack.push(JSON.stringify(shapes));
+            shapes = JSON.parse(undoStack.pop());
+            selectedShape = null;
+            redrawCanvas();
+            updateHistoryButtons();
+        }
+
+        function triggerRedo() {
+            if (redoStack.length === 0) return;
+            undoStack.push(JSON.stringify(shapes));
+            shapes = JSON.parse(redoStack.pop());
+            selectedShape = null;
+            redrawCanvas();
+            updateHistoryButtons();
+        }
+
+        function updateZoom() {
+            canvasContainer.style.transform = `scale(${zoomLevel})`;
+            zoomDisplay.textContent = `Zoom: ${Math.round(zoomLevel * 100)}%`;
+        }
+        document.getElementById('btnZoomIn').addEventListener('click', () => { if(zoomLevel < 3.0) { zoomLevel += 0.1; updateZoom(); } });
+        document.getElementById('btnZoomOut').addEventListener('click', () => { if(zoomLevel > 0.3) { zoomLevel -= 0.1; updateZoom(); } });
+        document.getElementById('btnZoomReset').addEventListener('click', () => { zoomLevel = 1.0; updateZoom(); });
+
+        btnUndo.addEventListener('click', triggerUndo);
+        btnRedo.addEventListener('click', triggerRedo);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Control') isCtrlPressed = true;
+            if (e.key === 'Shift') isShiftPressed = true;
+            
+            if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); triggerUndo(); }
+            if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); triggerRedo(); }
+
+            if (e.key === 'Enter' && currentTool === 'bezier' && bezierNodes.length > 0) finishBezierPath(false);
+            if (e.key === 'Delete' && selectedShape) { saveHistoryState(); deleteShape(selectedShape); }
+
+            if (!isDrawing && !isSelectingCrop) {
+                if (e.key.toLowerCase() === 's') setTool('select');
+                if (e.key.toLowerCase() === 'c') setTool('crop');
+                if (e.key.toLowerCase() === 'p') setTool('pencil');
+                if (e.key.toLowerCase() === 'b') setTool('bezier');
+                if (e.key.toLowerCase() === 'l') setTool('line');
+                if (e.key.toLowerCase() === 'r') setTool('rect');
+                if (e.key.toLowerCase() === 'f') setTool('fill');
+                if (e.key.toLowerCase() === 'e') setTool('eraser');
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'Control') isCtrlPressed = false;
+            if (e.key === 'Shift') isShiftPressed = false;
+        });
+
+        Object.keys(tools).forEach(toolName => {
+            tools[toolName].addEventListener('click', () => {
+                if(currentTool === 'bezier' && bezierNodes.length > 0) finishBezierPath(false);
+                setTool(toolName);
+            });
+        });
+
+        function setTool(toolName) {
+            currentTool = toolName;
+            isSelectingCrop = false;
+            Object.keys(tools).forEach(t => tools[t].classList.remove('active'));
+            tools[toolName].classList.add('active');
+            activeToolText.textContent = `Aktives Werkzeug: ${tools[toolName].title.split(' (')[0]}`;
+            canvas.style.cursor = (toolName === 'select' || toolName === 'crop' || toolName === 'fill' || toolName === 'eraser') ? 'default' : 'crosshair';
+            redrawCanvas();
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: Math.round((e.clientX - rect.left) / zoomLevel), y: Math.round((e.clientY - rect.top) / zoomLevel) };
+        }
+
+        function updateLayersPanel() {
+            layersList.innerHTML = '';
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const shape = shapes[i];
+                if (!shape.id) shape.id = 'shape_' + Math.random().toString(36).substr(2, 9);
+                if (shape.visible === undefined) shape.visible = true;
+
+                const item = document.createElement('div');
+                item.className = `layer-item ${selectedShape === shape ? 'selected' : ''}`;
+                
+                let icon = '▰';
+                let name = `Form (${shape.type})`;
+                if (shape.type === 'pencil') icon = '✏️';
+                if (shape.type === 'rect') icon = '▮';
+                if (shape.type === 'circle') icon = '⚪';
+                if (shape.type === 'star') icon = '⭐';
+                if (shape.type === 'line') icon = '╱';
+                if (shape.type === 'bezier') icon = '🖋️';
+                if (shape.type === 'image') { icon = '🖼️'; name = 'Bild'; }
+
+                item.innerHTML = `
+                    <div class="layer-icon">${icon}</div>
+                    <div class="layer-name">${name}</div>
+                    <div class="layer-actions">
+                        <button class="layer-btn toggle-visible-btn">${shape.visible ? '👁️' : '👁‍🗨'}</button>
+                        <button class="layer-btn delete-btn">🗑️</button>
+                    </div>
+                `;
+
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.layer-btn')) return;
+                    selectedShape = shape;
+                    if (currentTool !== 'fill') setTool('select');
+                    redrawCanvas();
+                });
+
+                item.querySelector('.toggle-visible-btn').addEventListener('click', () => {
+                    shape.visible = !shape.visible;
+                    redrawCanvas();
+                });
+
+                item.querySelector('.delete-btn').addEventListener('click', () => {
+                    saveHistoryState();
+                    deleteShape(shape);
+                });
+
+                layersList.appendChild(item);
+            }
+        }
+
+        function deleteShape(shape) {
+            shapes = shapes.filter(s => s !== shape);
+            if (selectedShape === shape) selectedShape = null;
+            redrawCanvas();
+        }
+
+        // Maximale Hit-Test Präzision für Formen, Linien & Pfade
+        function findShapeAt(x, y) {
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                let s = shapes[i];
+                if (!s.visible) continue;
+
+                if (s.type === 'rect' || s.type === 'image') {
+                    let minX = Math.min(s.startX, s.endX); let maxX = Math.max(s.startX, s.endX);
+                    let minY = Math.min(s.startY, s.endY); let maxY = Math.max(s.startY, s.endY);
+                    if (x >= minX && x <= maxX && y >= minY && y <= maxY) return s;
+                } else if (s.type === 'circle') {
+                    let cx = s.startX + (s.endX - s.startX) / 2; let cy = s.startY + (s.endY - s.startY) / 2;
+                    let rx = Math.abs(s.endX - s.startX) / 2; let ry = Math.abs(s.endY - s.startY) / 2;
+                    if ((Math.pow(x - cx, 2) / Math.pow(rx, 2) + Math.pow(y - cy, 2) / Math.pow(ry, 2)) <= 1.1) return s;
+                } else if (s.type === 'star') {
+                    let minX = Math.min(s.startX, s.endX); let maxX = Math.max(s.startX, s.endX);
+                    let minY = Math.min(s.startY, s.endY); let maxY = Math.max(s.startY, s.endY);
+                    if (x >= minX && x <= maxX && y >= minY && y <= maxY) return s;
+                } else if (s.type === 'pencil' && s.path) {
+                    for(let p of s.path) {
+                        if (Math.sqrt(Math.pow(x - p.x, 2) + Math.pow(y - p.y, 2)) < 20) return s;
+                    }
+                } else if (s.type === 'line' || s.type === 'bezier') {
+                    let distStart = Math.sqrt(Math.pow(x - s.startX, 2) + Math.pow(y - s.startY, 2));
+                    let distEnd = Math.sqrt(Math.pow(x - s.endX, 2) + Math.pow(y - s.endY, 2));
+                    if (distStart < 25 || distEnd < 25) return s;
+                    if (s.nodes) {
+                        for(let n of s.nodes) {
+                            if (Math.sqrt(Math.pow(x - n.x, 2) + Math.pow(y - n.y, 2)) < 25) return s;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            startX = pos.x; startY = pos.y;
+            currentX = pos.x; currentY = pos.y;
+
+            if (currentTool === 'fill') {
+                let clickedShape = findShapeAt(pos.x, pos.y);
+                if (clickedShape && clickedShape.type !== 'image') {
+                    saveHistoryState();
+                    clickedShape.fillColor = fillColorInput.value;
+                    selectedShape = clickedShape;
+                    redrawCanvas();
+                }
+                return;
+            }
+
+            if (currentTool === 'eraser') {
+                isDrawing = true;
+                let clickedShape = findShapeAt(pos.x, pos.y);
+                if (clickedShape) { saveHistoryState(); deleteShape(clickedShape); }
+                return;
+            }
+
+            if (currentTool === 'select') {
+                let clickedShape = findShapeAt(pos.x, pos.y);
+                if (clickedShape) {
+                    saveHistoryState();
+                    selectedShape = clickedShape;
+                    isDraggingShape = true;
+                    dragOffsetX = pos.x - clickedShape.startX;
+                    dragOffsetY = pos.y - clickedShape.startY;
+                } else { selectedShape = null; }
+                redrawCanvas();
+                return;
+            }
+
+            if (currentTool === 'crop') { isSelectingCrop = true; return; }
+
+            saveHistoryState();
+
+            if (currentTool === 'bezier') {
+                isDrawing = true; isDraggingBezier = true;
+                if (bezierNodes.length > 2 && Math.sqrt(Math.pow(pos.x - bezierNodes[0].x, 2) + Math.pow(pos.y - bezierNodes[0].y, 2)) < 15) { finishBezierPath(true); return; }
+                bezierNodes.push({ x: pos.x, y: pos.y, cp1x: pos.x, cp1y: pos.y, cp2x: pos.x, cp2y: pos.y });
+                redrawCanvasAndPreview();
+                return;
+            }
+
+            isDrawing = true;
+            if (currentTool === 'pencil') currentPath = [{x: startX, y: startY}];
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            mouseCoords.textContent = `X: ${pos.x}, Y: ${pos.y}`;
+            currentX = pos.x; currentY = pos.y;
+
+            if (currentTool === 'eraser' && isDrawing) {
+                let clickedShape = findShapeAt(pos.x, pos.y);
+                if (clickedShape) { deleteShape(clickedShape); }
+                return;
+            }
+
+            if (currentTool === 'select' && isDraggingShape && selectedShape) {
+                let w = selectedShape.endX - selectedShape.startX;
+                let h = selectedShape.endY - selectedShape.startY;
+                selectedShape.startX = pos.x - dragOffsetX; selectedShape.startY = pos.y - dragOffsetY;
+                selectedShape.endX = selectedShape.startX + w; selectedShape.endY = selectedShape.startY + h;
+                if (selectedShape.path) {
+                    let dx = selectedShape.startX - selectedShape.path[0].x; let dy = selectedShape.startY - selectedShape.path[0].y;
+                    selectedShape.path.forEach(p => { p.x += dx; p.y += dy; });
+                }
+                redrawCanvas();
+                return;
+            }
+
+            if (currentTool === 'crop' && isSelectingCrop) { redrawCanvasAndPreview(); return; }
+            if (!isDrawing) return;
+
+            if (currentTool === 'bezier' && isDraggingBezier) {
+                let activeNode = bezierNodes[bezierNodes.length - 1];
+                let dx = pos.x - activeNode.x; let dy = pos.y - activeNode.y;
+                activeNode.cp2x = activeNode.x + dx; activeNode.cp2y = activeNode.y + dy;
+                activeNode.cp1x = activeNode.x - dx; activeNode.cp1y = activeNode.y - dy;
+                redrawCanvasAndPreview();
+                return;
+            }
+
+            if (currentTool === 'pencil') currentPath.push({x: currentX, y: currentY});
+            redrawCanvasAndPreview();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (currentTool === 'eraser' || currentTool === 'fill') { isDrawing = false; return; }
+            if (!isDrawing && !isSelectingCrop && !isDraggingShape) return;
+            isDraggingShape = false;
+
+            if (currentTool === 'crop' && isSelectingCrop) {
+                isSelectingCrop = false;
+                let x = Math.min(startX, currentX); let y = Math.min(startY, currentY);
+                let w = Math.abs(currentX - startX); let h = Math.abs(currentY - startY);
+                if (w > 10 && h > 10) {
+                    saveHistoryState();
+                    canvas.width = w; canvas.height = h;
+                    shapes.forEach(s => { s.startX -= x; s.startY -= y; s.endX -= x; s.endY -= y; if(s.path) s.path.forEach(p => { p.x -= x; p.y -= y; }); });
+                    setTool('select');
+                } else { redrawCanvas(); }
+                return;
+            }
+
+            if (!isDrawing) return;
+            if (currentTool === 'bezier') { isDraggingBezier = false; return; }
+
+            isDrawing = false;
+            let targetX = currentX; let targetY = currentY;
+
+            let newShape = {
+                type: currentTool, strokeColor: strokeColorInput.value, fillColor: fillColorInput.value,
+                lineWidth: parseInt(strokeWidthInput.value), startX: startX, startY: startY, endX: targetX, endY: targetY,
+                path: [...currentPath], visible: true
+            };
+            shapes.push(newShape); selectedShape = newShape;
+            redrawCanvas();
+        });
+
+        function finishBezierPath(closed) {
+            isDrawing = false; isDraggingBezier = false;
+            if(bezierNodes.length < 2) { bezierNodes = []; redrawCanvas(); return; }
+            let newShape = {
+                type: 'bezier', strokeColor: strokeColorInput.value, fillColor: closed ? fillColorInput.value : 'transparent',
+                lineWidth: parseInt(strokeWidthInput.value), startX: bezierNodes[0].x, startY: bezierNodes[0].y, endX: currentX, endY: currentY,
+                nodes: [...bezierNodes], isClosed: closed, visible: true
+            };
+            shapes.push(newShape); selectedShape = newShape;
+            bezierNodes = []; redrawCanvas();
+        }
+
+        function drawStar(sX, sY, eX, eY, fill) {
+            let cx = sX + (eX - sX) / 2; let cy = sY + (eY - sY) / 2;
+            let spikes = 5; let rot = Math.PI / 2 * 3; let step = Math.PI / spikes;
+            let outerRadius = Math.sqrt(Math.pow(eX - cx, 2) + Math.pow(eY - cy, 2)); let innerRadius = outerRadius * 0.4;
+            ctx.beginPath(); ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                ctx.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius); rot += step;
+                ctx.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius); rot += step;
+            }
+            ctx.closePath(); if(fill) ctx.fill(); ctx.stroke();
+        }
+
+        function drawBezierPath(nodes, isClosed, strokeColor, fillColor, lineWidth) {
+            if (!nodes || nodes.length < 1) return;
+            ctx.beginPath(); ctx.lineWidth = lineWidth; ctx.strokeStyle = strokeColor; ctx.fillStyle = fillColor;
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            for (let i = 0; i < nodes.length - 1; i++) {
+                ctx.bezierCurveTo(nodes[i].cp2x, nodes[i].cp2y, nodes[i+1].cp1x, nodes[i+1].cp1y, nodes[i+1].x, nodes[i+1].y);
+            }
+            if (isClosed) { 
+                ctx.bezierCurveTo(nodes[nodes.length-1].cp2x, nodes[nodes.length-1].cp2y, nodes[0].cp1x, nodes[0].cp1y, nodes[0].x, nodes[0].y); 
+                ctx.closePath(); 
+                if(fillColor !== 'transparent') ctx.fill(); 
+            }
+            ctx.stroke();
+        }
+
+        function renderShape(shape) {
+            if (shape.visible === false) return;
+            ctx.lineWidth = shape.lineWidth; ctx.strokeStyle = shape.strokeColor; ctx.fillStyle = shape.fillColor;
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+            if (shape.type === 'bezier') {
+                drawBezierPath(shape.nodes, shape.isClosed, shape.strokeColor, shape.fillColor, shape.lineWidth);
+            } else if (shape.type === 'image') {
+                if (imageCache[shape.imageData]) ctx.drawImage(imageCache[shape.imageData], shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY);
+                else { let img = new Image(); img.src = shape.imageData; img.onload = () => { imageCache[shape.imageData] = img; redrawCanvas(); }; }
+            } else {
+                ctx.beginPath();
+                if (shape.type === 'pencil') {
+                    if (!shape.path || shape.path.length < 1) return;
+                    ctx.moveTo(shape.path[0].x, shape.path[0].y);
+                    for (let i = 1; i < shape.path.length; i++) ctx.lineTo(shape.path[i].x, shape.path[i].y);
+                    ctx.stroke();
+                } else if (shape.type === 'line') { ctx.moveTo(shape.startX, shape.startY); ctx.lineTo(shape.endX, shape.endY); ctx.stroke(); }
+                else if (shape.type === 'rect') { ctx.rect(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY); ctx.fill(); ctx.stroke(); }
+                else if (shape.type === 'circle') { ctx.ellipse(shape.startX + (shape.endX - shape.startX)/2, shape.startY + (shape.endY - shape.startY)/2, Math.abs(shape.endX - shape.startX)/2, Math.abs(shape.endY - shape.startY)/2, 0, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+                else if (shape.type === 'star') { drawStar(shape.startX, shape.startY, shape.endX, shape.endY, true); }
+            }
+
+            if (selectedShape === shape && (currentTool === 'select' || currentTool === 'fill')) {
+                ctx.save(); ctx.strokeStyle = '#007acc'; ctx.lineWidth = 2 / zoomLevel; ctx.setLineDash([5, 3]);
+                let minX = Math.min(shape.startX, shape.endX) - 4; let maxX = Math.max(shape.startX, shape.endX) + 4;
+                let minY = Math.min(shape.startY, shape.endY) - 4; let maxY = Math.max(shape.startY, shape.endY) + 4;
+                ctx.strokeRect(minX, minY, maxX - minX, maxY - minY); ctx.restore();
+            }
+        }
+
+        function redrawCanvas() {
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            shapes.forEach(shape => renderShape(shape));
+            updateLayersPanel();
+        }
+
+        function redrawCanvasAndPreview() {
+            redrawCanvas();
+            
+            if (currentTool === 'crop' && isSelectingCrop) {
+                let x = Math.min(startX, currentX); let y = Math.min(startY, currentY);
+                let w = Math.abs(currentX - startX); let h = Math.abs(currentY - startY);
+                ctx.save(); ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, y); ctx.fillRect(0, y + h, canvas.width, canvas.height - (y + h));
+                ctx.fillRect(0, y, x, h); ctx.fillRect(x + w, y, canvas.width - (x + w), h);
+                ctx.strokeStyle = '#4af2a1'; ctx.lineWidth = 2 / zoomLevel; ctx.strokeRect(x, y, w, h); ctx.restore();
+                return;
+            }
+
+            if (!isDrawing) return;
+
+            // FIX: Live-Vorschau für den Bezier-Pfad beim Ziehen rendern
+            if (currentTool === 'bezier' && bezierNodes.length > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = strokeColorInput.value;
+                ctx.lineWidth = parseInt(strokeWidthInput.value);
+                ctx.setLineDash([4, 4]); // Gestrichelte Linie für Vorschau
+                
+                // Vorherige feste Nodes abfahren
+                ctx.moveTo(bezierNodes[0].x, bezierNodes[0].y);
+                for (let i = 0; i < bezierNodes.length - 1; i++) {
+                    ctx.bezierCurveTo(bezierNodes[i].cp2x, bezierNodes[i].cp2y, bezierNodes[i+1].cp1x, bezierNodes[i+1].cp1y, bezierNodes[i+1].x, bezierNodes[i+1].y);
+                }
+                
+                // Vorschau-Linie zum aktuellen Mauszeiger ziehen
+                let lastNode = bezierNodes[bezierNodes.length - 1];
+                ctx.bezierCurveTo(lastNode.cp2x, lastNode.cp2y, currentX, currentY, currentX, currentY);
+                ctx.stroke();
+                ctx.restore();
+            } else if (currentTool !== 'eraser' && currentTool !== 'fill') {
+                renderShape({
+                    type: currentTool, strokeColor: strokeColorInput.value, fillColor: fillColorInput.value,
+                    lineWidth: strokeWidthInput.value, startX: startX, startY: startY, endX: currentX, endY: currentY, path: currentPath, visible: true
+                });
+            }
+        }
+
+        document.getElementById('menuInsertImage').addEventListener('click', () => { imageInput.click(); });
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                let imgData = event.target.result; let img = new Image(); img.src = imgData;
+                img.onload = function() {
+                    saveHistoryState();
+                    let w = img.width > 300 ? 300 : img.width; let h = (img.height / img.width) * w;
+                    let newImageShape = { type: 'image', imageData: imgData, startX: 60, startY: 60, endX: 60 + w, endY: 60 + h, lineWidth: 1, strokeColor: 'transparent', fillColor: 'transparent', visible: true };
+                    shapes.push(newImageShape); imageCache[imgData] = img;
+                    selectedShape = newImageShape; setTool('select'); redrawCanvas();
+                };
+            };
+            reader.readAsDataURL(file); imageInput.value = '';
+        });
+
+        document.getElementById('menuNew').addEventListener('click', () => { if (confirm('Neues Dokument erstellen?')) { canvas.width = 800; canvas.height = 550; shapes = []; undoStack = []; redoStack = []; zoomLevel = 1.0; updateZoom(); redrawCanvas(); } });
+        document.getElementById('menuExport').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(shapes));
+            const downloadAnchor = document.createElement('a'); downloadAnchor.setAttribute("href", dataStr); downloadAnchor.setAttribute("download", "inkscape_project.json");
+            document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
+        });
+        document.getElementById('menuImport').addEventListener('click', () => { importInput.click(); });
+        importInput.addEventListener('change', (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader(); reader.onload = function(event) {
+                try {
+                    shapes = JSON.parse(event.target.result);
+                    selectedShape = null; redrawCanvas();
+                } catch (err) { alert("Fehler beim Laden."); } importInput.value = '';
+            }; reader.readAsText(file);
+        });
+        document.getElementById('menuExportPNG').addEventListener('click', () => { const link = document.createElement('a'); link.download = 'vektor_design.png'; link.href = canvas.toDataURL('image/png'); link.click(); });
+        
+        redrawCanvas();
+    </script>
+</body>
+</html>

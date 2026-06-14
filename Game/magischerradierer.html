@@ -1,0 +1,414 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hintergrund-Entferner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f6f9;
+            margin: 20px;
+            color: #333;
+        }
+        #drop-zone {
+            width: 80%;
+            max-width: 700px;
+            height: 100px;
+            border: 3px dashed #007bff;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        #drop-zone.hover {
+            background-color: #e1ecf4;
+            border-color: #0056b3;
+        }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .sidebar {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 170px;
+        }
+        .tool-btn {
+            background-color: #f0f2f5;
+            color: #333;
+            border: 2px solid #ccc;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .tool-btn:hover { background-color: #e4e6e9; }
+        .tool-btn.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-danger:hover { background-color: #c82333; }
+        
+        .controls {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .export-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: auto;
+        }
+        .export-btn:hover { background-color: #218838; }
+        .export-btn:disabled { background-color: #6c757d; cursor: not-allowed; }
+        
+        .canvas-container {
+            position: relative;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="10" height="10" fill="%23eee"/><rect x="10" y="10" width="10" height="10" fill="%23eee"/></svg>') repeat;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Hintergrund-Ausschneider</h1>
+    
+    <div id="drop-zone">Bild hierhin ziehen oder klicken</div>
+    <input type="file" id="file-input" accept="image/*" style="display: none;">
+
+    <div class="controls">
+        <div class="slider-group">
+            <label for="tolerance">Toleranz: </label>
+            <input type="range" id="tolerance" min="0" max="150" value="35">
+            <span id="tolerance-val">35</span>
+        </div>
+        <div class="slider-group" style="background: #e1ecf4; padding: 5px 10px; border-radius: 5px;">
+            <label for="edge-softness"><b>Kanten-Weichheit:</b> </label>
+            <input type="range" id="edge-softness" min="0" max="5" value="2" step="1">
+            <span id="edge-softness-val">2px</span>
+        </div>
+        <div class="slider-group">
+            <label for="brush-size">Pinselgröße: </label>
+            <input type="range" id="brush-size" min="5" max="100" value="20">
+            <span id="brush-size-val">20px</span>
+        </div>
+        <button id="export-btn" class="export-btn" disabled>Bild speichern (PNG)</button>
+    </div>
+
+    <div class="main-layout">
+        <div class="sidebar">
+            <h3 style="margin:0 0 5px 0; font-size:16px;">Werkzeuge</h3>
+            <button class="tool-btn active" id="tool-wand">🪄 Zauberstab (+)</button>
+            <button class="tool-btn" id="tool-eraser">🧽 Radierer</button>
+            <button class="tool-btn" id="tool-restore">🖌️ Zurückmacher</button>
+            <hr style="width:100%; border:1px solid #eee; margin:10px 0;">
+            <button class="btn-danger" id="btn-reset">🔄 Zurücksetzen</button>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="main-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const toleranceSlider = document.getElementById('tolerance');
+        const toleranceVal = document.getElementById('tolerance-val');
+        const softnessSlider = document.getElementById('edge-softness');
+        const softnessVal = document.getElementById('edge-softness-val');
+        const brushSizeSlider = document.getElementById('brush-size');
+        const brushSizeVal = document.getElementById('brush-size-val');
+        const exportBtn = document.getElementById('export-btn');
+        const resetBtn = document.getElementById('btn-reset');
+
+        const toolWand = document.getElementById('tool-wand');
+        const toolEraser = document.getElementById('tool-eraser');
+        const toolRestore = document.getElementById('tool-restore');
+
+        let originalImageData = null; 
+        let currentImageData = null;  // Speichert den kumulierten Zustand aller Löschungen
+        let currentTool = 'wand';     
+        let isDrawing = false;
+
+        function setTool(tool, button) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            canvas.style.cursor = tool === 'wand' ? 'crosshair' : 'pointer';
+        }
+        toolWand.addEventListener('click', () => setTool('wand', toolWand));
+        toolEraser.addEventListener('click', () => setTool('eraser', toolEraser));
+        toolRestore.addEventListener('click', () => setTool('restore', toolRestore));
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('hover');
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+        toleranceSlider.addEventListener('input', (e) => { toleranceVal.textContent = e.target.value; });
+        softnessSlider.addEventListener('input', (e) => { 
+            softnessVal.textContent = e.target.value + "px"; 
+            applyMaskAndRender(); // Bei Schieberegler-Änderung sofort weicher zeichnen
+        });
+        brushSizeSlider.addEventListener('input', (e) => { brushSizeVal.textContent = e.target.value + "px"; });
+
+        resetBtn.addEventListener('click', () => {
+            if (!originalImageData) return;
+            currentImageData.data.set(originalImageData.data);
+            applyMaskAndRender();
+        });
+
+        exportBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'freigestellt_profi.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(800 / img.width, 1);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    applyMaskAndRender();
+                    exportBtn.disabled = false;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: Math.floor((e.clientX - rect.left) * (canvas.width / rect.width)),
+                y: Math.floor((e.clientY - rect.top) * (canvas.height / rect.height))
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!currentImageData) return;
+            const coords = getCanvasCoords(e);
+            
+            if (currentTool === 'wand') {
+                floodFillAppend(coords.x, coords.y);
+            } else {
+                isDrawing = true;
+                drawBrush(coords.x, coords.y);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing || currentTool === 'wand') return;
+            const coords = getCanvasCoords(e);
+            drawBrush(coords.x, coords.y);
+        });
+
+        window.addEventListener('mouseup', () => { isDrawing = false; });
+
+        function drawBrush(startX, startY) {
+            const radius = parseInt(brushSizeSlider.value);
+            const width = canvas.width;
+            const height = canvas.height;
+            const curData = currentImageData.data;
+            const origData = originalImageData.data;
+
+            for (let y = startY - radius; y <= startY + radius; y++) {
+                for (let x = startX - radius; x <= startX + radius; x++) {
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        if ((x - startX) ** 2 + (y - startY) ** 2 <= radius ** 2) {
+                            const idx = (y * width + x) * 4;
+                            if (currentTool === 'eraser') {
+                                curData[idx + 3] = 0; // Im Arbeits-ImageData löschen
+                            } else if (currentTool === 'restore') {
+                                curData[idx]     = origData[idx];
+                                curData[idx + 1] = origData[idx + 1];
+                                curData[idx + 2] = origData[idx + 2];
+                                curData[idx + 3] = origData[idx + 3];
+                            }
+                        }
+                    }
+                }
+            }
+            applyMaskAndRender();
+        }
+
+        // Additiver Zauberstab (Verändert das laufende currentImageData dauerhaft)
+        function floodFillAppend(startX, startY) {
+            const width = canvas.width;
+            const height = canvas.height;
+            const data = currentImageData.data;
+            const tolerance = parseInt(toleranceSlider.value);
+
+            const startIdx = (startY * width + startX) * 4;
+            // Nutze die Farbe aus dem unveränderten Originalbild als Referenz für diesen Klick
+            const targetR = originalImageData.data[startIdx];
+            const targetG = originalImageData.data[startIdx + 1];
+            const targetB = originalImageData.data[startIdx + 2];
+
+            const visited = new Uint8Array(width * height);
+            const queue = [startX, startY];
+            visited[startY * width + startX] = 1;
+            let head = 0;
+
+            function colorMatch(idx) {
+                return Math.sqrt(
+                    (originalImageData.data[idx] - targetR) ** 2 + 
+                    (originalImageData.data[idx + 1] - targetG) ** 2 + 
+                    (originalImageData.data[idx + 2] - targetB) ** 2
+                ) <= tolerance;
+            }
+
+            while (head < queue.length) {
+                const cx = queue[head++];
+                const cy = queue[head++];
+                const currentIdx = (cy * width + cx) * 4;
+                
+                // Setze im Arbeitsdaten-Satz diesen Pixel dauerhaft auf transparent
+                data[currentIdx + 3] = 0; 
+
+                const neighbors = [cx + 1, cy, cx - 1, cy, cx, cy + 1, cx, cy - 1];
+                for (let i = 0; i < neighbors.length; i += 2) {
+                    const nx = neighbors[i];
+                    const ny = neighbors[i+1];
+                    const vIdx = ny * width + nx;
+
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[vIdx]) {
+                        visited[vIdx] = 1;
+                        if (colorMatch(vIdx * 4)) {
+                            queue.push(nx, ny);
+                        }
+                    }
+                }
+            }
+            applyMaskAndRender();
+        }
+
+        // Post-Processing: Berechnet die weichen Kanten in Echtzeit
+        function applyMaskAndRender() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const softness = parseInt(softnessSlider.value);
+
+            // 1. Erstelle finales Render-Target basierend auf den Arbeitsdaten
+            const renderData = ctx.createImageData(currentImageData);
+            renderData.data.set(currentImageData.data);
+            const rData = renderData.data;
+
+            if (softness > 0) {
+                // Erstelle eine Alpha-Maske (0 für gelöscht, 255 für sichtbar)
+                const alphaMask = new Uint8Array(width * height);
+                for (let i = 0; i < alphaMask.length; i++) {
+                    alphaMask[i] = currentImageData.data[i * 4 + 3];
+                }
+
+                // Wende einen schnellen Box-Blur (Weichzeichner) auf die Alpha-Maske an
+                const blurredAlpha = new Uint8Array(width * height);
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let sum = 0;
+                        let count = 0;
+                        
+                        // Nachbarschafts-Helligkeitsdurchschnitt für die Kantenberechnung
+                        for (let ky = -softness; ky <= softness; ky++) {
+                            for (let kx = -softness; kx <= softness; kx++) {
+                                const nx = x + kx;
+                                const ny = y + ky;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    sum += alphaMask[ny * width + nx];
+                                    count++;
+                                }
+                            }
+                        }
+                        blurredAlpha[y * width + x] = sum / count;
+                    }
+                }
+
+                // Übertrage die weichgezeichnete Alpha-Maske zurück in das finale Bild
+                for (let i = 0; i < blurredAlpha.length; i++) {
+                    // Verhindert, dass komplett transparente Bereiche wieder sichtbar werden
+                    rData[i * 4 + 3] = Math.min(currentImageData.data[i * 4 + 3], blurredAlpha[i]);
+                }
+            }
+
+            // Rendern
+            ctx.putImageData(renderData, 0, 0);
+        }
+    </script>
+</body>
+</html>

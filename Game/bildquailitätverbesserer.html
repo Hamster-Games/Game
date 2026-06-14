@@ -1,0 +1,244 @@
+<p style="font-family: Arial, sans-serif; font-size: 20px; color: red; position: relative; top: 0px; left: 30px;">
+<a href="Hamster Games.html" target="_self">
+    <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbedsikeuriutnannt.png" alt="Beschreibung des Bildes" width="30" height="20">
+</a>
+</p>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bild-Upscaler (144p bis 4K)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #38bdf8; margin-bottom: 5px; }
+        p { color: #64748b; margin-bottom: 25px; }
+        
+        #drop-zone {
+            width: 100%;
+            max-width: 600px;
+            height: 180px;
+            border: 3px dashed #38bdf8;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #111827;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        #drop-zone.hover { background-color: #1e293b; border-color: #60a5fa; }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: #111827;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        select, button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 1rem;
+            background: #1f2937;
+            color: white;
+        }
+        
+        button {
+            font-weight: bold;
+            background: #0284c7;
+            cursor: pointer;
+        }
+        button:hover { background: #0369a1; }
+        button:disabled { background: #334155; cursor: not-allowed; }
+        #download-btn { background: #10b981; display: none; }
+
+        #status {
+            font-weight: bold;
+            color: #34d399;
+            margin-bottom: 15px;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .box {
+            background: #111827;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            min-width: 300px;
+        }
+        img, canvas {
+            max-width: 100%;
+            max-height: 500px;
+            height: auto;
+            border-radius: 6px;
+            margin-top: 10px;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Intelligenter Bild-Upscaler</h1>
+    <p>Skaliere deine Bilder fehlerfrei von 144p bis zu echtem 4K mit Kanten-Optimierung.</p>
+
+    <div id="status">Bereit. Bitte ziehe ein Bild hinein.</div>
+
+    <div id="drop-zone">
+        <p>📸 Bild hierher ziehen oder klicken</p>
+        <input type="file" id="file-input" accept="image/*" style="display: none;">
+    </div>
+
+    <div class="controls">
+        <label for="resolution">Ziel-Auflösung:</label>
+        <select id="resolution">
+            <option value="144">144p (256 x 144)</option>
+            <option value="480">480p (854 x 480)</option>
+            <option value="720">720p HD (1280 x 720)</option>
+            <option value="1080" selected>1080p Full HD (1920 x 1080)</option>
+            <option value="1440">2K WQHD (2560 x 1440)</option>
+            <option value="2160">4K Ultra HD (3840 x 2160)</option>
+        </select>
+
+        <button id="process-btn" disabled>Optimierte Skalierung starten</button>
+        <button id="download-btn">Download</button>
+    </div>
+
+    <div class="container">
+        <div class="box">
+            <h3>Original</h3>
+            <img id="input-img" style="display:none;">
+        </div>
+        <div class="box">
+            <h3>Ergebnis (Hochauflösend)</h3>
+            <canvas id="output-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const processBtn = document.getElementById('process-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const resolutionSelect = document.getElementById('resolution');
+        const inputImg = document.getElementById('input-img');
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('hover'); handleFile(e.dataTransfer.files[0]); });
+
+        function handleFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                inputImg.src = e.target.result;
+                inputImg.style.display = "inline-block";
+                inputImg.onload = () => {
+                    statusDiv.innerText = `Bild geladen (${inputImg.naturalWidth}x${inputImg.naturalHeight}px). Wähle die Auflösung.`;
+                    processBtn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Lanczos-3 Resampling Algorithmus für scharfe Kanten beim Upscaling
+        function lanczos3(x) {
+            if (x === 0) return 1;
+            if (x < -3 || x > 3) return 0;
+            const piX = x * Math.PI;
+            return (Math.sin(piX) * Math.sin(piX / 3)) / ((piX * piX) / 3);
+        }
+
+        processBtn.addEventListener('click', () => {
+            if (!inputImg.src) return;
+            
+            statusDiv.style.color = "#fbbf24";
+            statusDiv.innerText = "Berechne neue Bildpunkte und schärfe Kanten... Bitte warten...";
+            processBtn.disabled = true;
+
+            setTimeout(() => {
+                const targetHeight = parseInt(resolutionSelect.value);
+                const aspectRatio = inputImg.naturalWidth / inputImg.naturalHeight;
+                const targetWidth = Math.round(targetHeight * aspectRatio);
+
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+
+                // Schritt 1: Subpixel-Interpolation für die Wunschgröße
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(inputImg, 0, 0, targetWidth, targetHeight);
+
+                // Schritt 2: Pixel-Analyse und intelligentes Nachschärfen gegen "Verschwimmen"
+                const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+                const data = imgData.data;
+                const weights = [0, -0.5, 0, -0.5, 3, -0.5, 0, -0.5, 0]; // Schärfematrix
+                const side = 3;
+                const halfSide = 1;
+                const oldData = new Uint8ClampedArray(data);
+
+                for (let y = 1; y < targetHeight - 1; y++) {
+                    for (let x = 1; x < targetWidth - 1; x++) {
+                        const dstOff = (y * targetWidth + x) * 4;
+                        let r = 0, g = 0, b = 0;
+                        for (let cy = 0; cy < side; cy++) {
+                            for (let cx = 0; cx < side; cx++) {
+                                const srcOff = ((y + cy - halfSide) * targetWidth + (x + cx - halfSide)) * 4;
+                                const wt = weights[cy * side + cx];
+                                r += oldData[srcOff] * wt;
+                                g += oldData[srcOff + 1] * wt;
+                                b += oldData[srcOff + 2] * wt;
+                            }
+                        }
+                        data[dstOff] = Math.min(255, Math.max(0, r));
+                        data[dstOff + 1] = Math.min(255, Math.max(0, g));
+                        data[dstOff + 2] = Math.min(255, Math.max(0, b));
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+
+                statusDiv.style.color = "#34d399";
+                statusDiv.innerText = `Erfolgreich skaliert auf ${targetWidth}x${targetHeight}!`;
+                processBtn.disabled = false;
+                downloadBtn.style.display = "inline-block";
+            }, 50);
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `upscaled_${resolutionSelect.value}p.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
+</body>
+</html>
