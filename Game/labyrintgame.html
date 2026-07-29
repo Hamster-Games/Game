@@ -3,80 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Multiplayer Labyrinth Race Mobile</title>
+    <title>Multiplayer Labyrinth Race</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        * { box-sizing: border-box; touch-action: manipulation; }
-        body { margin: 0; padding: 10px; background: #1a1a1a; color: #fff; font-family: sans-serif; text-align: center; }
-        
-        /* Responsive Canvas container */
+        * { 
+            box-sizing: border-box; 
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body { 
+            margin: 0; 
+            padding: 10px; 
+            background: #121212; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+        }
+
         #canvas-container {
             width: 100%;
             max-width: 500px;
             margin: 10px auto;
-            position: relative;
+            touch-action: none; /* Verhindert Scrollen beim Wischen über das Spielfeld */
         }
 
         canvas { 
             background: #000; 
-            border: 2px solid #555; 
+            border: 2px solid #444; 
             display: block; 
             width: 100%; 
             height: auto; 
-            touch-action: none; /* Verhindert ungewolltes Scrollen beim Zeichnen auf Handys */
+            border-radius: 6px;
         }
 
-        .controls, .editor-tools { margin: 10px 0; }
-        input, button { padding: 10px 14px; margin: 4px; font-weight: bold; border-radius: 6px; border: none; font-size: 14px; }
-        button { cursor: pointer; background: #333; color: white; border: 1px solid #666; }
-        button.active { background: #4CAF50; color: white; border-color: #4CAF50; }
-        #status { font-weight: bold; color: #ffeb3b; font-size: 1.1em; margin: 10px 0; min-height: 1.2em; }
-        .highlight { color: #2196F3; font-weight: bold; }
+        .controls, .editor-tools { 
+            margin: 10px auto; 
+            max-width: 500px;
+        }
 
-        /* Virtuelles Steuerkreuz für mobile Geräte */
+        input {
+            padding: 12px;
+            margin: 4px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            text-align: center;
+        }
+
+        button { 
+            padding: 12px 16px; 
+            margin: 4px; 
+            font-weight: bold; 
+            border-radius: 8px; 
+            border: none; 
+            font-size: 14px;
+            cursor: pointer; 
+            background: #2a2a2a; 
+            color: white; 
+            border: 1px solid #444; 
+        }
+
+        button:active { transform: scale(0.96); }
+        button.active { background: #4CAF50; color: white; border-color: #4CAF50; }
+        
+        #status { 
+            font-weight: bold; 
+            color: #ffeb3b; 
+            font-size: 1.1em; 
+            margin: 10px 0; 
+            min-height: 1.5em; 
+        }
+
+        /* Virtuelles D-Pad für Smartphones */
         #dpad {
             display: none;
-            grid-template-columns: repeat(3, 50px);
-            grid-template-rows: repeat(3, 50px);
-            gap: 5px;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 6px;
             justify-content: center;
             margin: 15px auto;
         }
+
         #dpad button {
-            background: #444;
+            background: #333;
             color: white;
-            font-size: 18px;
+            font-size: 22px;
             padding: 0;
             margin: 0;
-            border: 1px solid #777;
+            border: 1px solid #555;
+            border-radius: 10px;
         }
+
         #dpad button:active { background: #2196F3; }
     </style>
 </head>
 <body>
 
-    <h1>Labyrinth Race (50x50)</h1>
-    <div id="status">Gib deinen Spielernamen ein!</div>
+    <h2>Labyrinth Race (50x50)</h2>
+    <div id="status">Name eingeben & starten!</div>
 
     <div class="controls" id="name-setup">
         <input type="text" id="my-name-input" placeholder="Dein Spielername">
-        <button onclick="registerName()" style="background: #4CAF50; color: white;">Name bestätigen</button>
+        <br>
+        <button onclick="registerName()" style="background: #4CAF50; color: white; width: 80%; margin-top: 8px;">Name bestätigen</button>
     </div>
 
     <div class="controls" id="connection-box" style="display: none;">
-        <p>Dein Name: <span class="highlight" id="display-my-name"></span></p>
-        <hr style="width: 80%; border-color: #444;">
+        <p>Dein Name: <b style="color: #2196F3;" id="display-my-name"></b></p>
         <input type="text" id="join-name-input" placeholder="Name des Gegners">
-        <button onclick="connectToPeer()" style="background: #2196F3; color: white;">Verbinden</button>
+        <br>
+        <button onclick="connectToPeer()" style="background: #2196F3; color: white; width: 80%; margin-top: 8px;">Mit Gegner verbinden</button>
     </div>
 
     <div class="editor-tools" id="editor-tools" style="display: none;">
-        <button id="btn-wall" class="active" onclick="setTool('wall')">🧱 Wand platzieren</button>
-        <button id="btn-erase" onclick="setTool('erase')">🧹 Wand löschen</button>
-        <button id="btn-start" onclick="setTool('start')">🟢 Start setzen</button>
-        <button id="btn-end" onclick="setTool('end')">🔴 Ziel setzen</button>
+        <button id="btn-wall" class="active" onclick="setTool('wall')">🧱 Wand</button>
+        <button id="btn-erase" onclick="setTool('erase')">🧹 Löschen</button>
+        <button id="btn-start" onclick="setTool('start')">🟢 Start</button>
+        <button id="btn-end" onclick="setTool('end')">🔴 Ziel</button>
         <br>
-        <button style="background: #4CAF50; color: white; margin-top: 8px;" onclick="sendMaze()"> Fertigstellen!</button>
+        <button style="background: #4CAF50; color: white; width: 90%; margin-top: 10px;" onclick="sendMaze()"> Fertig! Labyrinth abschicken</button>
     </div>
 
     <div id="canvas-container">
@@ -97,7 +146,7 @@
 
     <script>
         const GRID_SIZE = 50;
-        const CELL_SIZE = 10; // Internes Koordinatensystem (500x500 Canvas)
+        const CELL_SIZE = 10;
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -109,7 +158,6 @@
         let myName = "";
         let enemyName = "";
 
-        // Labyrinthe
         let myMaze = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
         let myStart = { x: 0, y: 0 };
         let myEnd = { x: 49, y: 49 };
@@ -132,13 +180,13 @@
                 document.getElementById('name-setup').style.display = 'none';
                 document.getElementById('connection-box').style.display = 'block';
                 document.getElementById('display-my-name').innerText = myName;
-                document.getElementById('status').innerText = 'Verbinde dich jetzt mit deinem Gegner!';
+                document.getElementById('status').innerText = 'Verbinde dich mit deinem Gegner!';
                 gameState = 'connect';
             });
 
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    alert('Dieser Name ist schon vergeben! Wähle einen anderen.');
+                    alert('Dieser Name ist schon besetzt! Nimm einen anderen.');
                 } else {
                     alert('Verbindungsfehler: ' + err.type);
                 }
@@ -153,8 +201,8 @@
 
         function connectToPeer() {
             enemyName = document.getElementById('join-name-input').value.trim();
-            if (!enemyName) return alert("Bitte gib den Namen des Gegners ein!");
-            if (enemyName === myName) return alert("Du kannst dich nicht mit dir selbst verbinden!");
+            if (!enemyName) return alert("Bitte Gegner-Namen eingeben!");
+            if (enemyName === myName) return alert("Du kannst dich nicht selbst herausfordern!");
 
             conn = peer.connect(enemyName);
             setupConnection();
@@ -177,7 +225,7 @@
                     draw();
                 } else if (data.type === 'win') {
                     gameState = 'gameover';
-                    document.getElementById('status').innerText = `❌ ${enemyName} war schneller! Du hast verloren.`;
+                    document.getElementById('status').innerText = `❌ ${enemyName} hat das Ziel vor dir erreicht!`;
                     document.getElementById('dpad').style.display = 'none';
                     draw();
                 }
@@ -187,7 +235,7 @@
         function startEditingPhase() {
             document.getElementById('connection-box').style.display = 'none';
             document.getElementById('editor-tools').style.display = 'block';
-            document.getElementById('status').innerText = `Du baust ein Labyrinth für ${enemyName}!`;
+            document.getElementById('status').innerText = `Baue ein Labyrinth für ${enemyName}!`;
             gameState = 'edit';
             draw();
         }
@@ -201,15 +249,12 @@
             if(tool === 'end') document.getElementById('btn-end').classList.add('active');
         }
 
-        // --- Touch & Maus Steuerung für den Editor ---
-        let isDrawing = false;
-
+        // Touch & Pointer Koordinaten-Umrechnung
         function getGridPos(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             
-            // Umrechnung von Bildschirmgröße auf die interne 500x500 Canvas-Größe
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
@@ -218,6 +263,8 @@
 
             return { x, y };
         }
+
+        let isDrawing = false;
 
         function handlePointerStart(e) {
             if (gameState !== 'edit') return;
@@ -247,20 +294,18 @@
 
         function handlePointerEnd() { isDrawing = false; }
 
-        // Maus Events
         canvas.addEventListener('mousedown', handlePointerStart);
         canvas.addEventListener('mousemove', handlePointerMove);
         window.addEventListener('mouseup', handlePointerEnd);
 
-        // Touch Events für Handys
-        canvas.addEventListener('touchstart', (e) => { handlePointerStart(e); e.preventDefault(); });
-        canvas.addEventListener('touchmove', (e) => { handlePointerMove(e); e.preventDefault(); });
+        canvas.addEventListener('touchstart', (e) => { handlePointerStart(e); e.preventDefault(); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { handlePointerMove(e); e.preventDefault(); }, { passive: false });
         canvas.addEventListener('touchend', handlePointerEnd);
 
         function sendMaze() {
             gameState = 'waiting';
             document.getElementById('editor-tools').style.display = 'none';
-            document.getElementById('status').innerText = `Warte auf das Labyrinth von ${enemyName}...`;
+            document.getElementById('status').innerText = `Warte auf ${enemyName}...`;
             
             conn.send({
                 type: 'maze_data',
@@ -275,13 +320,12 @@
         function checkStartGame() {
             if (gameState === 'waiting' && playMaze !== null) {
                 gameState = 'play';
-                document.getElementById('status').innerText = `🚀 LOS! Erreiche das Ziel vor ${enemyName}!`;
-                document.getElementById('dpad').style.display = 'grid'; // D-Pad aktivieren
+                document.getElementById('status').innerText = `🚀 RENNEN! Schlag ${enemyName}!`;
+                document.getElementById('dpad').style.display = 'grid';
                 draw();
             }
         }
 
-        // --- Bewegung der Figur ---
         function movePlayer(dx, dy) {
             if (gameState !== 'play') return;
 
@@ -297,7 +341,7 @@
 
                     if (playerPos.x === playEnd.x && playerPos.y === playEnd.y) {
                         gameState = 'gameover';
-                        document.getElementById('status').innerText = `🏆 GEWONNEN! ${myName} ist im Ziel!`;
+                        document.getElementById('status').innerText = `🏆 GEWONNEN! Du warst schneller!`;
                         document.getElementById('dpad').style.display = 'none';
                         conn.send({ type: 'win' });
                     }
@@ -307,7 +351,6 @@
             }
         }
 
-        // Tastatursteuerung für Desktop-PCs
         window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') movePlayer(0, -1);
             if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') movePlayer(0, 1);
@@ -315,7 +358,6 @@
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') movePlayer(1, 0);
         });
 
-        // --- Grafik zeichnen ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -342,11 +384,10 @@
                         }
                     }
                 }
-                // Ziel
                 ctx.fillStyle = '#00FF00';
                 ctx.fillRect(playEnd.x * CELL_SIZE, playEnd.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-                // Gegner (Schatten)
+                // Gegner (Rot)
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
                 ctx.fillRect(enemyPos.x * CELL_SIZE, enemyPos.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
