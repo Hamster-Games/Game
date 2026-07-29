@@ -7,11 +7,51 @@
     <link rel="icon" href="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/ewwdasdadw.png" type="image/png">
 
     <style>
+        /* CSS-Variablen */
+        :root {
+            --accent-color: #ff4757;
+            --accent-hover: #ff6b81;
+            --bg-overlay: rgba(20, 20, 20, 0.85);
+            --card-bg: rgba(35, 35, 35, 0.9);
+            --text-color: #ffffff;
+            --header-bg: rgba(15, 15, 15, 0.9);
+            --sidebar-bg: rgba(20, 20, 20, 0.98);
+            --body-bg: #121212;
+            --body-img: none;
+        }
+
+        /* Light Mode */
+        body.light-mode {
+            --bg-overlay: rgba(240, 240, 240, 0.9);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-color: #111111;
+            --header-bg: rgba(230, 230, 230, 0.95);
+            --sidebar-bg: rgba(245, 245, 245, 0.98);
+            --body-bg: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--body-bg);
+            background-image: var(--body-img);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            transition: color 0.3s ease, background-color 0.3s ease;
+        }
+
         /* Das Start-Overlay */
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(50, 50, 50, 0.95); /* Dunkelgrau */
+            background: rgba(15, 15, 15, 0.95);
             color: white;
             display: flex;
             flex-direction: column;
@@ -19,46 +59,288 @@
             justify-content: center;
             z-index: 9999;
             cursor: pointer;
-            font-family: Arial, sans-serif;
             text-align: center;
         }
 
         #overlay h1 {
-            font-size: 3rem;
-            text-shadow: 2px 2px 10px black;
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px var(--accent-color);
         }
 
         #overlay p {
             font-size: 1.2rem;
             opacity: 0.8;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
         }
 
-        /* Dein Website-Design */
-        body {
-            background-image: url('https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Screenshot%202026-05-09%20102756.png');
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            background-size: cover;
-            margin: 0;
+        /* Header */
+        header {
+            background: var(--header-bg);
+            backdrop-filter: blur(10px);
             padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border-bottom: 2px solid var(--accent-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .game-link {
-            font-family: Arial, sans-serif;
-            font-size: 20px;
-            color: red;
-            margin-left: 30px;
-            margin-bottom: 20px;
+        header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            color: var(--text-color);
+            text-transform: uppercase;
+            flex-grow: 1;
         }
 
-        img {
-            border: 3px solid transparent;
+        /* Burger Button (3 Striche) */
+        .menu-btn {
+            font-size: 1.8rem;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 5px 15px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .menu-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -340px;
+            width: 320px;
+            height: 100%;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            transition: right 0.3s ease;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar.active {
+            right: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-section h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            border-left: 3px solid var(--accent-color);
+            padding-left: 8px;
+        }
+
+        .sidebar-section a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            transition: background 0.2s, color 0.2s;
+            font-weight: 500;
+        }
+
+        .sidebar-section a:hover {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .theme-toggle-btn, .bg-btn {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+        }
+
+        .theme-toggle-btn:hover, .bg-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Perfekt RUNDE Farbpunkte */
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            justify-items: center;
+        }
+
+        .color-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%; /* Perfekt rund */
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.8);
             transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        img:hover {
+        .color-dot:hover {
+            transform: scale(1.15);
+        }
+
+        /* Custom Color Inputs */
+        .custom-color-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .custom-color-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 32px;
+            height: 32px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .custom-color-input::-webkit-color-swatch {
+            border-radius: 50%; /* Perfekt rund */
+            border: 2px solid white;
+        }
+
+        .custom-color-input::-moz-color-swatch {
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        #menu-backdrop {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        #menu-backdrop.active {
+            display: block;
+        }
+
+        /* Content & Cards */
+        #content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .category {
+            margin-bottom: 50px;
+            background: var(--bg-overlay);
+            backdrop-filter: blur(5px);
+            padding: 20px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            scroll-margin-top: 100px;
+        }
+
+        .category h2 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--accent-color);
+            display: inline-block;
+            padding-bottom: 5px;
+            color: var(--accent-hover);
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 2px solid transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-card a {
+            display: block;
+            width: 100%;
+            height: 100%;
+            text-decoration: none;
+        }
+
+        .game-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+            box-shadow: 0 8px 20px var(--accent-color);
+        }
+
+        .game-card:hover img {
             transform: scale(1.05);
-            border-color: red;
         }
     </style>
 </head>
@@ -71,224 +353,185 @@
 
     <audio id="bg-music" loop>
         <source src="Jungle hamstergames song.mp3" type="audio/mpeg">
-        <source src="Jungle hamstergames song.mp3" type="audio/mpeg">
     </audio>
 
+    <header>
+        <div style="width: 40px;"></div>
+        <h1>🐹 Hamster Games 🎮</h1>
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    </header>
+
+    <div id="menu-backdrop" onclick="toggleSidebar()"></div>
+
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>Navigation & Design</h2>
+            <button class="close-btn" onclick="toggleSidebar()">✖</button>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Kategorien</h3>
+            <a href="#arcade" onclick="toggleSidebar()">🕹️ Arcade & Klassiker</a>
+            <a href="#action" onclick="toggleSidebar()">⚡ Action & Geschick</a>
+            <a href="#kreativ" onclick="toggleSidebar()">🎨 Kreativ & Tools</a>
+            <a href="#extras" onclick="toggleSidebar()">🎧 Extras</a>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Erscheinungsbild</h3>
+            <button class="theme-toggle-btn" onclick="toggleTheme()">🌙 / ☀️ Dark / Light Mode</button>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Akzentfarben</h3>
+            <div class="color-picker-grid">
+                <div class="color-dot" style="background: #ff4757;" onclick="setAccent('#ff4757', '#ff6b81')"></div>
+                <div class="color-dot" style="background: #1e90ff;" onclick="setAccent('#1e90ff', '#70a1ff')"></div>
+                <div class="color-dot" style="background: #2ed573;" onclick="setAccent('#2ed573', '#7bed9f')"></div>
+                <div class="color-dot" style="background: #a55eea;" onclick="setAccent('#a55eea', '#d2dae2')"></div>
+                <div class="color-dot" style="background: #ff7f50;" onclick="setAccent('#ff7f50', '#ffa07a')"></div>
+                <div class="color-dot" style="background: #00d2d3;" onclick="setAccent('#00d2d3', '#48dbfb')"></div>
+                <div class="color-dot" style="background: #ff9ff3;" onclick="setAccent('#ff9ff3', '#feca57')"></div>
+                <div class="color-dot" style="background: #feca57;" onclick="setAccent('#feca57', '#ffdd59')"></div>
+            </div>
+            <div class="custom-color-item">
+                <span>Eigene Akzentfarbe:</span>
+                <input type="color" class="custom-color-input" id="customAccentInput" value="#ff4757" oninput="setCustomAccent(this.value)">
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Hintergrund</h3>
+            <button class="bg-btn" onclick="setOriginalBg()">🖼️ Original Bild verwenden</button>
+            <div class="custom-color-item">
+                <span>Hintergrundfarbe:</span>
+                <input type="color" class="custom-color-input" id="customBodyBgInput" value="#121212" oninput="setCustomBodyBg(this.value)">
+            </div>
+            <div class="custom-color-item">
+                <span>Kacheln-Farbe:</span>
+                <input type="color" class="custom-color-input" id="customBgInput" value="#232323" oninput="setCustomCardBg(this.value)">
+            </div>
+        </div>
+
+    </div>
+
     <div id="content">
-        <br><br><br>
 
-        <div class="game-link">
-            <a href="snacke.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Snake%203d%20Bild.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="Confusing Maze.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Confusing%20Maze%20Bild.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="Chrome dino.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Crome%20dino%20auf%20Wish%20Bild.png" width="300" height="200">
-            </a>
+        <div class="category" id="arcade">
+            <h2>🕹️ Arcade & Klassiker</h2>
+            <div class="game-grid">
+                <div class="game-card"><a href="snacke.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Snake%203d%20Bild.png" alt="Snake 3D"></a></div>
+                <div class="game-card"><a href="Chrome dino.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Crome%20dino%20auf%20Wish%20Bild.png" alt="Chrome Dino"></a></div>
+                <div class="game-card"><a href="tiktaktoe.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tic_Tac_Toe.png" alt="Tic Tac Toe"></a></div>
+                <div class="game-card"><a href="tetris.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tetris.png" alt="Tetris"></a></div>
+                <div class="game-card"><a href="2048klon.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/2048clone.png" alt="2048"></a></div>
+                <div class="game-card"><a href="Frogger.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/HamsterFrog.png" alt="Frogger"></a></div>
+                <div class="game-card"><a href="Minesweeper.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Minesweeper.png" alt="Minesweeper"></a></div>
+                <div class="game-card"><a href="pacman.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Hamster%20man.png" alt="Pacman"></a></div>
+            </div>
         </div>
 
-        <div class="game-link">
-            <a href="Minefake.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/WhatsApp%20Image%202026-05-08%20at%2022.15.32.jpeg" width="300" height="200">
-            </a>
+        <div class="category" id="action">
+            <h2>⚡ Action & Geschicklichkeit</h2>
+            <div class="game-grid">
+                <div class="game-card"><a href="Confusing Maze.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Confusing%20Maze%20Bild.png" alt="Confusing Maze"></a></div>
+                <div class="game-card"><a href="Minefake.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/WhatsApp%20Image%202026-05-08%20at%2022.15.32.jpeg" alt="Minefake"></a></div>
+                <div class="game-card"><a href="auto.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Infinite_Speed_racer.png" alt="Speed Racer"></a></div>
+                <div class="game-card"><a href="minigolf.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Mini_golf.png" alt="Minigolf"></a></div>
+                <div class="game-card"><a href="aim.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Aim_Tester.png" alt="Aim Tester"></a></div>
+                <div class="game-card"><a href="circle.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Draw_a_Perfekt_Circle.png" alt="Perfect Circle"></a></div>
+                <div class="game-card"><a href="shoter.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster_Shoter.png" alt="Hamster Shooter"></a></div>
+                <div class="game-card"><a href="clicker.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Clicker_game.png" alt="Clicker"></a></div>
+                <div class="game-card"><a href="Chicken Bazookaa.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/ChickenBazookaa.png" alt="Chicken Bazooka"></a></div>
+                <div class="game-card"><a href="Box-Bouncer.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/boxbouncer.png" alt="Box Bouncer"></a></div>
+                <div class="game-card"><a href="Subway surfers.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster%20Surfer.png" alt="Hamster Surfer"></a></div>
+                <div class="game-card"><a href="hamsterjump.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/HamsterJump.png" alt="Hamster Jump"></a></div>
+                <div class="game-card"><a href="maulwurf.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/haudenmaulwurv.pgn.png" alt="Hau den Maulwurf"></a></div>
+                <div class="game-card"><a href="hamsterbird.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamsterbird.png" alt="Hamster Bird"></a></div>
+                <div class="game-card"><a href="staking hamster.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Stapelhamster.png" alt="Stapelhamster"></a></div>
+                <div class="game-card"><a href="münzenwurf.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Muenzwurf.png" alt="Münzenwurf"></a></div>
+                <div class="game-card"><a href="Scheresteinpapier.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Hamster%20Stein%20Papier.png" alt="Schere Stein Papier"></a></div>
+                <div class="game-card"><a href="fruitninja.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Befruchtungs%20Hamster.png" alt="Fruit Ninja"></a></div>
+                <div class="game-card"><a href="Car racing game.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Car%20Racing%20game.png" alt="Car Racing"></a></div>
+            </div>
         </div>
 
-        <div class="game-link">
-            <a href="auto.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Infinite_Speed_racer.png" width="300" height="200">
-            </a>
+        <div class="category" id="kreativ">
+            <h2>🎨 Kreativ & Tools</h2>
+            <div class="game-grid">
+                <div class="game-card"><a href="malprogramm.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Paint_Game.png" alt="Malprogramm"></a></div>
+                <div class="game-card"><a href="bildkonverter.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/BildKonverter_krass.png" alt="Bildkonverter"></a></div>
+                <div class="game-card"><a href="bildquailitätverbesserer.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Ki_gert.png" alt="KI Qualitätsverbesserer"></a></div>
+                <div class="game-card"><a href="illustraiter.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Eduard_Ilustrator_nicht_tuff.png" alt="Illustrator"></a></div>
+                <div class="game-card"><a href="magischerradierer.html"><img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Magischer_Radierer_krass.png" alt="Magischer Radierer"></a></div>
+            </div>
         </div>
 
-        <div class="game-link">
-            <a href="minigolf.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Mini_golf.png" width="300" height="200">
-            </a>
+        <div class="category" id="extras">
+            <h2>🎧 Extras</h2>
+            <div class="game-grid">
+                <div class="game-card">
+                    <a href="https://soundcloud.com/dj-black-spider-526732157?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" target="_blank">
+                        <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Djblackspider.png" alt="DJ Black Spider SoundCloud">
+                    </a>
+                </div>
+            </div>
         </div>
 
-        <div class="game-link">
-            <a href="aim.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Aim_Tester.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="circle.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Draw_a_Perfekt_Circle.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="tiktaktoe.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tic_Tac_Toe.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="tetris.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Tetris.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="malprogramm.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Paint_Game.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="shoter.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster_Shoter.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="clicker.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Clicker_game.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="Chicken Bazookaa.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/ChickenBazookaa.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="Box-Bouncer.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/boxbouncer.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="Subway surfers.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamster%20Surfer.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="hamsterjump.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/HamsterJump.png" width="300" height="200">
-            </a>
-        </div>
-
-                <div class="game-link">
-            <a href="2048klon.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/2048clone.png" width="300" height="200">
-            </a>
-        </div>
-
-                <div class="game-link">
-            <a href="Frogger.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/HamsterFrog.png" width="300" height="200">
-            </a>
-        </div>
-
-                <div class="game-link">
-            <a href="maulwurf.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/haudenmaulwurv.pgn.png" width="300" height="200">
-            </a>
-        </div>
-
-                <div class="game-link">
-            <a href="Minesweeper.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Minesweeper.png" width="300" height="200">
-            </a>
-        </div>
-
-                <div class="game-link">
-            <a href="hamsterbird.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Hamsterbird.png" width="300" height="200">
-            </a>
-        </div>
-
-                        <div class="game-link">
-            <a href="staking hamster.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Stapelhamster.png" width="300" height="200">
-            </a>
-        </div>
-
-                        <div class="game-link">
-            <a href="münzenwurf.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Muenzwurf.png" width="300" height="200">
-            </a>
-        </div>
-
-                        <div class="game-link">
-            <a href="Scheresteinpapier.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Hamster%20Stein%20Papier.png" width="300" height="200">
-            </a>
-        </div>
-
-                        <div class="game-link">
-            <a href="fruitninja.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Befruchtungs%20Hamster.png" width="300" height="200">
-            </a>
-        </div>
-
-                        <div class="game-link">
-            <a href="pacman.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Hamster%20man.png" width="300" height="200">
-            </a>
-        </div>
-
-                                <div class="game-link">
-            <a href="Car racing game.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Car%20Racing%20game.png" width="300" height="200">
-            </a>
-        </div>
-        
-                                <div class="game-link">
-            <a href="bildkonverter.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/BildKonverter_krass.png" width="300" height="200">
-            </a>
-        </div>
-        
-                                <div class="game-link">
-            <a href="bildquailitätverbesserer.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Ki_gert.png" width="300" height="200">
-            </a>
-        </div>
-        
-                                <div class="game-link">
-            <a href="illustraiter.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Eduard_Ilustrator_nicht_tuff.png" width="300" height="200">
-            </a>
-        </div>
-        
-                                <div class="game-link">
-            <a href="magischerradierer.html" target="_self">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20FOTOEINKAUFSLADEN%20texture/Magischer_Radierer_krass.png" width="300" height="200">
-            </a>
-        </div>
-
-        <div class="game-link">
-            <a href="https://soundcloud.com/dj-black-spider-526732157?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing" target="_blank">
-                <img src="https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Neue%20Photoshop%20game%20textuen/Djblackspider.png" width="300" height="200">
-            </a>
-        </div>
     </div>
 
     <script>
         function startApp() {
-            // Musik starten
             const audio = document.getElementById('bg-music');
             audio.play().catch(e => console.log("Audio Fehler:", e));
 
-            // Overlay entfernen
             const overlay = document.getElementById('overlay');
             overlay.style.transition = "opacity 0.5s";
             overlay.style.opacity = "0";
             setTimeout(() => {
                 overlay.style.display = 'none';
             }, 500);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('menu-backdrop');
+            sidebar.classList.toggle('active');
+            backdrop.classList.toggle('active');
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+        }
+
+        function setAccent(mainColor, hoverColor) {
+            document.documentElement.style.setProperty('--accent-color', mainColor);
+            document.documentElement.style.setProperty('--accent-hover', hoverColor);
+            document.getElementById('customAccentInput').value = mainColor;
+        }
+
+        function setCustomAccent(colorHex) {
+            document.documentElement.style.setProperty('--accent-color', colorHex);
+            document.documentElement.style.setProperty('--accent-hover', colorHex);
+        }
+
+        /* Hintergrundfunktionen */
+        function setOriginalBg() {
+            document.documentElement.style.setProperty('--body-img', "url('https://raw.githubusercontent.com/Hamster-Games/Game/refs/heads/main/Texturen/Unbenannt.png')");
+        }
+
+        function setCustomBodyBg(colorHex) {
+            document.documentElement.style.setProperty('--body-img', 'none');
+            document.documentElement.style.setProperty('--body-bg', colorHex);
+        }
+
+        function setCustomCardBg(colorHex) {
+            const r = parseInt(colorHex.slice(1, 3), 16);
+            const g = parseInt(colorHex.slice(3, 5), 16);
+            const b = parseInt(colorHex.slice(5, 7), 16);
+            
+            document.documentElement.style.setProperty('--card-bg', `rgba(${r}, ${g}, ${b}, 0.9)`);
+            document.documentElement.style.setProperty('--bg-overlay', `rgba(${r}, ${g}, ${b}, 0.85)`);
         }
     </script>
 
