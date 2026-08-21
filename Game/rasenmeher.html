@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stone Grass Clone</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            background-color: #2e7d32;
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        #shop {
+            width: 800px;
+            background-color: #2a2a2a;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-around;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            gap: 8px;
+        }
+
+        .upg-btn {
+            background-color: #4caf50;
+            border: none;
+            color: white;
+            padding: 10px 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .upg-btn:hover {
+            background-color: #45a049;
+        }
+
+        .upg-btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .sub-text {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        #sell-zone-info {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui">
+            <div id="money-display">Geld: $0</div>
+            <div id="capacity-display">Korb: 0 / 20</div>
+            <div id="level-display">Stufe: 1 (Grün)</div>
+        </div>
+        <div id="sell-zone-info">Fahre auf die gelbe Zone unten, um Gras zu verkaufen!</div>
+        <canvas id="canvas" width="800" height="500"></canvas>
+    </div>
+
+    <div id="shop">
+        <button id="upg-blade" class="upg-btn">
+            Kraft
+            <span class="sub-text">Power</span>
+        </button>
+        <button id="upg-size" class="upg-btn">
+            Größe
+            <span class="sub-text">Radius</span>
+        </button>
+        <button id="upg-rate" class="upg-btn">
+            Klingentempo
+            <span class="sub-text">Tempo</span>
+        </button>
+        <button id="upg-speed" class="upg-btn">
+            Fahrtempo
+            <span class="sub-text">Speed</span>
+        </button>
+        <button id="upg-cap" class="upg-btn">
+            Kapazität
+            <span class="sub-text">Korb</span>
+        </button>
+    </div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const STAGES = [
+    { name: 'Grün', color: '#4CAF50', cutColor: '#2E7D32', hp: 10, val: 1 },
+    { name: 'Gelb', color: '#FFEB3B', cutColor: '#FBC02D', hp: 50, val: 5 },
+    { name: 'Orange', color: '#FF9800', cutColor: '#F57C00', hp: 200, val: 25 },
+    { name: 'Rot', color: '#F44336', cutColor: '#D32F2F', hp: 800, val: 120 },
+    { name: 'Lila', color: '#9C27B0', cutColor: '#7B1FA2', hp: 3000, val: 500 },
+    { name: 'Blau', color: '#2196F3', cutColor: '#1976D2', hp: 10000, val: 2000 }
+];
+
+let currentStageIndex = 0;
+let money = 0;
+let inventory = 0;
+let inventoryValue = 0;
+
+// Upgrades
+let bladeLvl = 1, bladePower = 5, bladeCost = 15;
+let sizeLvl = 1, bladeRadius = 28, sizeCost = 30; // Max Level 9
+let rateLvl = 1, attackSpeed = 100, rateCost = 25; // Unendlich Level
+let speedLvl = 1, moveSpeed = 2.5, speedCost = 20;
+let capLvl = 1, maxCapacity = 20, capCost = 10;
+
+let lastCutTime = 0;
+
+// Traktor
+const tractor = {
+    x: canvas.width / 2,
+    y: canvas.height - 80,
+    radius: 18,
+    angle: -Math.PI / 2
+};
+
+const GRID_SIZE = 20;
+const COLS = canvas.width / GRID_SIZE;
+const ROWS = (canvas.height - 60) / GRID_SIZE;
+let grid = [];
+let totalTiles = COLS * ROWS;
+let harvestedTiles = 0;
+
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+function initGrid() {
+    grid = [];
+    harvestedTiles = 0;
+    const stage = STAGES[currentStageIndex];
+    
+    for (let r = 0; r < ROWS; r++) {
+        let row = [];
+        for (let c = 0; c < COLS; c++) {
+            row.push({
+                hp: stage.hp,
+                maxHp: stage.hp,
+                cut: false
+            });
+        }
+        grid.push(row);
+    }
+}
+
+// Upgrade-Handler
+document.getElementById('upg-blade').addEventListener('click', () => {
+    if (money >= bladeCost) {
+        money -= bladeCost;
+        bladeLvl++;
+        bladePower += 5;
+        bladeCost = Math.floor(bladeCost * 1.6);
+        updateUI();
+    }
+});
+
+document.getElementById('upg-size').addEventListener('click', () => {
+    if (sizeLvl < 9 && money >= sizeCost) {
+        money -= sizeCost;
+        sizeLvl++;
+        bladeRadius += 4;
+        sizeCost = Math.floor(sizeCost * 1.8);
+        updateUI();
+    }
+});
+
+document.getElementById('upg-rate').addEventListener('click', () => {
+    if (money >= rateCost) {
+        money -= rateCost;
+        rateLvl++;
+        // Exponentielle Verringerung: Kann endlos aufgewertet werden
+        attackSpeed = Math.max(0, attackSpeed * 0.85); 
+        rateCost = Math.floor(rateCost * 1.6);
+        updateUI();
+    }
+});
+
+document.getElementById('upg-speed').addEventListener('click', () => {
+    if (money >= speedCost) {
+        money -= speedCost;
+        speedLvl++;
+        moveSpeed += 0.4;
+        speedCost = Math.floor(speedCost * 1.7);
+        updateUI();
+    }
+});
+
+document.getElementById('upg-cap').addEventListener('click', () => {
+    if (money >= capCost) {
+        money -= capCost;
+        capLvl++;
+        maxCapacity += 20;
+        capCost = Math.floor(capCost * 1.5);
+        updateUI();
+    }
+});
+
+function updateUI() {
+    document.getElementById('money-display').innerText = `Geld: $${money}`;
+    document.getElementById('capacity-display').innerText = `Korb: ${inventory} / ${maxCapacity}`;
+    document.getElementById('level-display').innerText = `Stufe: ${currentStageIndex + 1} (${STAGES[currentStageIndex].name})`;
+
+    const btnBlade = document.getElementById('upg-blade');
+    btnBlade.innerHTML = `Kraft Lvl ${bladeLvl}<span class="sub-text">Pwr: ${bladePower} | $${bladeCost}</span>`;
+    btnBlade.disabled = money < bladeCost;
+
+    const btnSize = document.getElementById('upg-size');
+    if (sizeLvl >= 9) {
+        btnSize.innerHTML = `Größe MAX (Lvl 9)<span class="sub-text">Rad: ${bladeRadius}px | MAX</span>`;
+        btnSize.disabled = true;
+    } else {
+        btnSize.innerHTML = `Größe Lvl ${sizeLvl}/9<span class="sub-text">Rad: ${bladeRadius}px | $${sizeCost}</span>`;
+        btnSize.disabled = money < sizeCost;
+    }
+
+    const btnRate = document.getElementById('upg-rate');
+    btnRate.innerHTML = `Tempo Lvl ${rateLvl}<span class="sub-text">${Math.round(attackSpeed)}ms | $${rateCost}</span>`;
+    btnRate.disabled = money < rateCost;
+
+    const btnSpeed = document.getElementById('upg-speed');
+    btnSpeed.innerHTML = `Speed Lvl ${speedLvl}<span class="sub-text">Spd: ${moveSpeed.toFixed(1)} | $${speedCost}</span>`;
+    btnSpeed.disabled = money < speedCost;
+
+    const btnCap = document.getElementById('upg-cap');
+    btnCap.innerHTML = `Korb Lvl ${capLvl}<span class="sub-text">Max: ${maxCapacity} | $${capCost}</span>`;
+    btnCap.disabled = money < capCost;
+}
+
+function update(timestamp) {
+    let dx = 0;
+    let dy = 0;
+
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) dy -= 1;
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) dy += 1;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) dx += 1;
+
+    if (dx !== 0 || dy !== 0) {
+        tractor.angle = Math.atan2(dy, dx);
+        tractor.x += Math.cos(tractor.angle) * moveSpeed;
+        tractor.y += Math.sin(tractor.angle) * moveSpeed;
+
+        tractor.x = Math.max(tractor.radius, Math.min(canvas.width - tractor.radius, tractor.x));
+        tractor.y = Math.max(tractor.radius, Math.min(canvas.height - tractor.radius, tractor.y));
+    }
+
+    if (inventory < maxCapacity && (timestamp - lastCutTime >= attackSpeed)) {
+        let stage = STAGES[currentStageIndex];
+        let hitAny = false;
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let tile = grid[r][c];
+                if (tile.cut) continue;
+
+                let tileX = c * GRID_SIZE + GRID_SIZE / 2;
+                let tileY = r * GRID_SIZE + GRID_SIZE / 2;
+                let dist = Math.hypot(tractor.x - tileX, tractor.y - tileY);
+
+                if (dist < bladeRadius) {
+                    tile.hp -= bladePower;
+                    hitAny = true;
+
+                    if (tile.hp <= 0) {
+                        tile.cut = true;
+                        inventory++;
+                        inventoryValue += stage.val;
+                        harvestedTiles++;
+                        if (inventory >= maxCapacity) break;
+                    }
+                }
+            }
+            if (inventory >= maxCapacity) break;
+        }
+
+        if (hitAny) {
+            lastCutTime = timestamp;
+        }
+    }
+
+    const sellZone = { x: canvas.width / 2 - 60, y: canvas.height - 50, w: 120, h: 50 };
+    if (tractor.x > sellZone.x && tractor.x < sellZone.x + sellZone.w &&
+        tractor.y > sellZone.y) {
+        if (inventory > 0) {
+            money += inventoryValue;
+            inventory = 0;
+            inventoryValue = 0;
+            updateUI();
+        }
+    }
+
+    if (harvestedTiles / totalTiles >= 0.9) {
+        if (currentStageIndex < STAGES.length - 1) {
+            currentStageIndex++;
+            initGrid();
+        }
+    }
+
+    updateUI();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const stage = STAGES[currentStageIndex];
+
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            let tile = grid[r][c];
+            let x = c * GRID_SIZE;
+            let y = r * GRID_SIZE;
+
+            if (tile.cut) {
+                ctx.fillStyle = stage.cutColor;
+                ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+            } else {
+                ctx.fillStyle = stage.color;
+                ctx.fillRect(x, y, GRID_SIZE - 1, GRID_SIZE - 1);
+
+                if (tile.hp < tile.maxHp) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    let ratio = 1 - (tile.hp / tile.maxHp);
+                    ctx.fillRect(x, y, GRID_SIZE - 1, (GRID_SIZE - 1) * ratio);
+                }
+            }
+        }
+    }
+
+    ctx.fillStyle = '#FFD54F';
+    ctx.fillRect(canvas.width / 2 - 60, canvas.height - 50, 120, 50);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('VERKAUFEN', canvas.width / 2, canvas.height - 20);
+
+    ctx.save();
+    ctx.translate(tractor.x, tractor.y);
+    ctx.rotate(tractor.angle);
+
+    ctx.beginPath();
+    ctx.arc(10, 0, bladeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(220, 220, 220, 0.4)';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(-15, -12, 30, 24);
+
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-12, -16, 10, 5);
+    ctx.fillRect(-12, 11, 10, 5);
+    ctx.fillRect(4, -15, 8, 4);
+    ctx.fillRect(4, 11, 8, 4);
+
+    ctx.fillStyle = '#424242';
+    ctx.fillRect(-6, -7, 10, 14);
+
+    ctx.restore();
+}
+
+function loop(timestamp) {
+    update(timestamp);
+    draw();
+    requestAnimationFrame(loop);
+}
+
+initGrid();
+updateUI();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

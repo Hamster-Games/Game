@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HamsterGPT</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-color: #1f2937;
+      --user-msg-bg: var(--primary-color);
+      --user-msg-text: #ffffff;
+      --ai-msg-bg: #e5e7eb;
+      --ai-msg-text: #1f2937;
+      --border-color: #e5e7eb;
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --orb-color: #2563eb;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #111827;
+      --card-bg: #1f2937;
+      --text-color: #f9fafb;
+      --user-msg-bg: var(--primary-color);
+      --user-msg-text: #ffffff;
+      --ai-msg-bg: #374151;
+      --ai-msg-text: #f9fafb;
+      --border-color: #374151;
+    }
+
+    [data-color="blue"] { --primary-color: #2563eb; --primary-hover: #1d4ed8; --orb-color: #3b82f6; }
+    [data-color="green"] { --primary-color: #059669; --primary-hover: #047857; --orb-color: #10b981; }
+    [data-color="purple"] { --primary-color: #7c3aed; --primary-hover: #6d28d9; --orb-color: #8b5cf6; }
+    [data-color="orange"] { --primary-color: #ea580c; --primary-hover: #c2410c; --orb-color: #f97316; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .header {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .title-group h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    /* Animierte Sprach-Kugel */
+    .speech-orb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--orb-color);
+      box-shadow: 0 0 10px var(--orb-color);
+      transition: all 0.3s ease;
+      display: none;
+    }
+
+    .speech-orb.active {
+      display: block;
+    }
+
+    .speech-orb.speaking {
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.85);
+        box-shadow: 0 0 5px var(--orb-color);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1.3);
+        box-shadow: 0 0 22px var(--orb-color), 0 0 35px var(--orb-color);
+        opacity: 1;
+      }
+    }
+
+    .btn {
+      background-color: var(--ai-msg-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 25px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 12px 18px;
+      border-radius: 16px;
+      font-size: 1rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+      animation: fadeIn 0.2s ease-in-out;
+      white-space: pre-wrap;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: var(--user-msg-bg);
+      color: var(--user-msg-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .hamster {
+      align-self: flex-start;
+      background-color: var(--ai-msg-bg);
+      color: var(--ai-msg-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-image {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 10px;
+      display: block;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .input-container {
+      background-color: var(--card-bg);
+      border-top: 1px solid var(--border-color);
+      padding: 20px;
+    }
+
+    .input-area {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      gap: 12px;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      border-radius: 10px;
+      outline: none;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--primary-color);
+    }
+
+    button.send-btn {
+      padding: 0 24px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
+
+    button.send-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Pop-up Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      padding: 25px;
+      border-radius: 16px;
+      max-width: 480px;
+      width: 90%;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.2rem;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-color);
+      cursor: pointer;
+    }
+
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .setting-item label {
+      font-weight: 600;
+    }
+
+    .color-select {
+      background-color: var(--ai-msg-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .command-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 0.95rem;
+    }
+
+    .command-list code {
+      background-color: var(--ai-msg-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+  </style>
+</head>
+<body data-theme="light" data-color="blue">
+
+  <div class="header">
+    <div class="title-group">
+      <h1>HamsterGPT</h1>
+      <div class="speech-orb active" id="speechOrb" title="Sprach-Kugel"></div>
+    </div>
+    <div>
+      <button class="btn" onclick="openModal('settingsModal')">⚙️ Einstellungen</button>
+    </div>
+  </div>
+
+  <div class="chat-box" id="chatBox">
+    <div class="message hamster">Hallo! Ich bin HamsterGPT. Du kannst mich nach Spielen fragen, Bilder generieren (z. B. "bild ein roter drache") oder im Einstellungen-Menü stöbern!</div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Schreibe eine Nachricht oder 'bild [beschreibung]'..." onkeypress="handleKeyPress(event)">
+      <button class="send-btn" onclick="sendMessage()">Senden</button>
+    </div>
+  </div>
+
+  <!-- Einstellungen Modal -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeModalOnOverlay(event, 'settingsModal')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ Einstellungen</h2>
+        <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
+      </div>
+      <div class="settings-group">
+        <div class="setting-item">
+          <label>Design-Modus:</label>
+          <button class="btn" id="themeBtn" onclick="toggleTheme()">🌙 Dark Mode</button>
+        </div>
+        <div class="setting-item">
+          <label>Hauptfarbe:</label>
+          <select class="color-select" onchange="changeColor(this.value)">
+            <option value="blue">Blau</option>
+            <option value="green">Grün</option>
+            <option value="purple">Violett</option>
+            <option value="orange">Orange</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Sprachausgabe:</label>
+          <button class="btn" id="ttsBtn" onclick="toggleTTS()">🔊 Ton: AN</button>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 5px 0;">
+        <button class="btn" onclick="closeModal('settingsModal'); openModal('secretModal');">🤫 Secret Commands anzeigen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secret Commands Modal -->
+  <div class="modal-overlay" id="secretModal" onclick="closeModalOnOverlay(event, 'secretModal')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🤫 Supersecret Commands</h2>
+        <button class="close-btn" onclick="closeModal('secretModal')">&times;</button>
+      </div>
+      <ul class="command-list">
+        <li><code>bild [Beschreibung]</code> - Generiert ein KI-Bild im Chat.</li>
+        <li><code>Wer ist DJ Black Spider</code> - Infos über die Musik-Legende.</li>
+        <li><code>Crazy Games</code> - Die ehrliche Meinung der KI dazu.</li>
+        <li><code>Andere Webseiten</code> - Erfahre die Wahrheit über andere Seiten.</li>
+        <li><code>sag [Text]</code> - Lässt die KI deinen Text direkt nachsprechen.</li>
+        <li><code>alle Spiele / Games</code> - Zeigt die komplette Spieleliste an.</li>
+        <li><code>Arcade Games</code> - Zeigt nur Arcade & Klassiker.</li>
+        <li><code>Action Games</code> - Zeigt Action & Geschicklichkeit.</li>
+        <li><code>Kreativ Tools</code> - Zeigt Mal- und Bild-Tools.</li>
+        <li><code>Mathe-Aufgaben</code> - Z. B. <code>5+5</code>, <code>10 mal 2</code>, <code>Wurzel aus 16</code>, <code>2 hoch 4</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+<script>
+let ttsEnabled = true;
+
+const hamsterGames = {
+  arcade: [
+    "Snake 3D",
+    "Chrome Dino auf Wish",
+    "Tic Tac Toe",
+    "Tetris",
+    "2048 Clone",
+    "Hamster Frog",
+    "Minesweeper",
+    "Hamster Man"
+  ],
+  action: [
+    "Confusing Maze",
+    "Minefake",
+    "Infinite Speed Racer",
+    "Mini Golf",
+    "Aim Tester",
+    "Draw a Perfect Circle",
+    "Hamster Shooter",
+    "Clicker Game",
+    "Chicken Bazooka",
+    "Box Bouncer",
+    "Hamster Surfer",
+    "Hamster Jump",
+    "Hau den Maulwurf",
+    "Hamster Bird",
+    "Stapelhamster",
+    "Münzwurf",
+    "Hamster Stein Papier",
+    "Fruit Hamster",
+    "Car Racing Game"
+  ],
+  kreativ: [
+    "Paint Game",
+    "Bildkonverter",
+    "KI Bild Upscaler",
+    "Eduard Illustrator",
+    "Magischer Radierer"
+  ],
+  extras: [
+    "Musik by DjBlackSp!der"
+  ]
+};
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function closeModalOnOverlay(e, id) {
+  if (e.target.id === id) {
+    closeModal(id);
+  }
+}
+
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  if (body.getAttribute('data-theme') === 'light') {
+    body.setAttribute('data-theme', 'dark');
+    btn.innerText = "☀️ Light Mode";
+  } else {
+    body.setAttribute('data-theme', 'light');
+    btn.innerText = "🌙 Dark Mode";
+  }
+}
+
+function changeColor(color) {
+  document.body.setAttribute('data-color', color);
+}
+
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = document.getElementById('ttsBtn');
+  const orb = document.getElementById('speechOrb');
+
+  if (ttsEnabled) {
+    btn.innerText = "🔊 Ton: AN";
+    orb.classList.add('active');
+  } else {
+    btn.innerText = "🔇 Ton: AUS";
+    orb.classList.remove('active', 'speaking');
+    window.speechSynthesis.cancel();
+  }
+}
+
+function speak(text) {
+  if (!ttsEnabled || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+
+  const orb = document.getElementById('speechOrb');
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'de-DE';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+
+  utterance.onstart = () => {
+    orb.classList.add('speaking');
+  };
+
+  utterance.onend = () => {
+    orb.classList.remove('speaking');
+  };
+
+  utterance.onerror = () => {
+    orb.classList.remove('speaking');
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+
+  if (text === "") return;
+
+  appendMessage(text, 'user');
+  input.value = '';
+
+  setTimeout(() => {
+    const response = getHamsterResponse(text);
+    
+    if (typeof response === 'object' && response.type === 'image') {
+      appendImageMessage(response.text, response.imageUrl);
+      speak(response.text);
+    } else {
+      appendMessage(response, 'hamster');
+      speak(response);
+    }
+  }, 400);
+}
+
+function handleKeyPress(e) {
+  if (e.key === 'Enter') sendMessage();
+}
+
+function appendMessage(text, sender) {
+  const chatBox = document.getElementById('chatBox');
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', sender);
+  msgDiv.innerText = text;
+  chatBox.appendChild(msgDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function appendImageMessage(text, imageUrl) {
+  const chatBox = document.getElementById('chatBox');
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', 'hamster');
+  
+  const textNode = document.createTextNode(text);
+  msgDiv.appendChild(textNode);
+
+  const img = document.createElement('img');
+  img.src = imageUrl;
+  img.classList.add('chat-image');
+  img.alt = 'Generiertes Bild';
+  
+  img.onload = () => {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  };
+
+  msgDiv.appendChild(img);
+  chatBox.appendChild(msgDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function parseAndCalculate(input) {
+  let expr = input.toLowerCase();
+
+  expr = expr.replace(/geteilt durch|durch|geteilt/g, '/');
+  expr = expr.replace(/mal/g, '*');
+  expr = expr.replace(/plus/g, '+');
+  expr = expr.replace(/minus/g, '-');
+  expr = expr.replace(/hoch/g, '^');
+
+  // Wurzel
+  const sqrtMatch = expr.match(/(?:wurzel\s*(?:aus)?|sqrt)\s*(\d+(?:\.\d+)?)/);
+  if (sqrtMatch) {
+    const val = parseFloat(sqrtMatch[1]);
+    const res = Math.sqrt(val);
+    return `Die Wurzel aus ${val} ist ${res}.`;
+  }
+
+  // Potenz
+  const powMatch = expr.match(/(\d+(?:\.\d+)?)\s*\^\s*(\d+(?:\.\d+)?)/);
+  if (powMatch) {
+    const base = parseFloat(powMatch[1]);
+    const exp = parseFloat(powMatch[2]);
+    const res = Math.pow(base, exp);
+    return `${base} hoch ${exp} ergibt ${res}.`;
+  }
+
+  // Standardrechnungen (+ - * /)
+  const mathMatch = expr.match(/(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)/);
+  if (mathMatch) {
+    const num1 = parseFloat(mathMatch[1]);
+    const op = mathMatch[2];
+    const num2 = parseFloat(mathMatch[3]);
+    let result = 0;
+
+    if (op === '+') result = num1 + num2;
+    if (op === '-') result = num1 - num2;
+    if (op === '*') result = num1 * num2;
+    if (op === '/') {
+      if (num2 === 0) return 'Durch 0 kann nicht geteilt werden.';
+      result = num1 / num2;
+    }
+
+    return `Das Ergebnis von ${num1} ${op} ${num2} ist ${result}.`;
+  }
+
+  return null;
+}
+
+function getHamsterResponse(input) {
+  const cleanInput = input.toLowerCase().trim();
+
+  // Bildgenerierung per "bild [beschreibung]"
+  if (cleanInput.startsWith('bild ')) {
+    const prompt = input.substring(5).trim();
+    if (prompt.length > 0) {
+      const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
+      return {
+        type: 'image',
+        text: `Hier ist dein Bild zu "${prompt}":`,
+        imageUrl: imageUrl
+      };
+    }
+  }
+
+  // 1. DJ Black Spider Abfrage
+  if (cleanInput.includes('dj black spider') || cleanInput.includes('djblackspider')) {
+    return 'DJ Black Spider ist übelst berühmt! Er hat schon ganz viele Auszeichnungen gewonnen, macht super coole Pop-Musik und produziert sogar Schlager für Radio Paloma! 🎧🎵';
+  }
+
+  // 2. Crazy Games Abfrage
+  if (cleanInput.includes('crazy games') || cleanInput.includes('crazygames')) {
+    return 'Ich glaub ich muss kotzen wueeee! 🤮';
+  }
+
+  // 3. Fragen nach anderen Webseiten
+  if (cleanInput.includes('andere') && (cleanInput.includes('website') || cleanInput.includes('seite') || cleanInput.includes('seiten'))) {
+    return 'Nein! HamsterGames ist absolut das Beste vom Besten! Es gibt keine bessere Website!';
+  }
+
+  // 4. Abfrage aller Spiele
+  if ((cleanInput.includes('alle') || cleanInput.includes('welche')) && (cleanInput.includes('spiele') || cleanInput.includes('games'))) {
+    if (cleanInput.includes('arcade') || cleanInput.includes('klassiker')) {
+      return `Hier sind alle Arcade & Klassiker Spiele auf HamsterGames:\n• ` + hamsterGames.arcade.join('\n• ');
+    }
+    if (cleanInput.includes('action') || cleanInput.includes('geschicklichkeit')) {
+      return `Hier sind alle Action & Geschicklichkeitsspiele auf HamsterGames:\n• ` + hamsterGames.action.join('\n• ');
+    }
+    if (cleanInput.includes('kreativ') || cleanInput.includes('tool')) {
+      return `Hier sind alle Kreativ & Tools auf HamsterGames:\n• ` + hamsterGames.kreativ.join('\n• ');
+    }
+    
+    return `Hier sind alle Spiele und Tools auf HamsterGames:\n\n🕹️ ARCADE & KLASSIKER:\n• ` + 
+      hamsterGames.arcade.join('\n• ') + 
+      `\n\n⚡ ACTION & GESCHICKLICHKEIT:\n• ` + 
+      hamsterGames.action.join('\n• ') + 
+      `\n\n🎨 KREATIV & TOOLS:\n• ` + 
+      hamsterGames.kreativ.join('\n• ') + 
+      `\n\n🎧 EXTRAS:\n• ` + 
+      hamsterGames.extras.join('\n• ');
+  }
+
+  // 5. Rechnungen erkennen
+  const calcResult = parseAndCalculate(input);
+  if (calcResult !== null) {
+    return calcResult;
+  }
+
+  // 6. "Sag..."-Befehl
+  if (cleanInput.startsWith('sag ')) {
+    const repeatText = input.substring(4).trim();
+    if (repeatText.length > 0) {
+      return repeatText;
+    }
+  }
+
+  // 7. Standard-Fragen
+  if (cleanInput.includes('hallo') || cleanInput.includes('hi')) {
+    return 'Hallo! Ich bin HamsterGPT. Wie kann ich dir helfen?';
+  }
+  if (cleanInput.includes('wer bist du')) {
+    return 'Ich bin HamsterGPT, deine KI-Assistentin für HamsterGames.';
+  }
+  if (cleanInput.includes('wie gehts') || cleanInput.includes('wie geht\'s')) {
+    return 'Mir geht es gut, danke der Nachfrage! Wie geht es dir?';
+  }
+
+  // 8. Zufallsantworten
+  const dumbResponses = [
+    "Das habe ich leider nicht verstanden.",
+    "Ich bin mir nicht sicher, was du meinst.",
+    "Könntest du das bitte anders ausdrücken?",
+    "Ich kenne die Antwort darauf leider nicht.",
+    "Das überschreitet aktuell meine Fähigkeiten."
+  ];
+
+  return dumbResponses[Math.floor(Math.random() * dumbResponses.length)];
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Count Hamster</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body { margin: 0; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    .screen {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      color: white; text-align: center; z-index: 10;
+    }
+    
+    #menu-screen {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+    }
+
+    #game-ui {
+      position: absolute; top: 20px; left: 20px; color: white;
+      font-size: 22px; font-weight: 800; text-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      pointer-events: none; z-index: 5; display: none;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 20px; border-radius: 12px; margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    h1 { font-size: 48px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }
+    
+    button {
+      padding: 16px 40px; font-size: 22px; font-weight: bold; color: white;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none; border-radius: 50px; cursor: pointer;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+      transition: transform 0.1s, background 0.2s;
+      margin-top: 20px;
+    }
+    button:hover { transform: scale(1.05); background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    button:active { transform: scale(0.95); }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- HUD -->
+  <div id="game-ui">
+    <div class="card">Level: <span id="level-txt">1</span></div>
+    <div class="card">Gruppe: <span id="count-txt">1</span></div>
+  </div>
+
+  <!-- Menü -->
+  <div id="menu-screen" class="screen">
+    <h1 id="menu-title">Count Masters</h1>
+    <p id="menu-subtitle">Wähle die besten Tore! Hast du weniger Einheiten als Rot, verlierst du!</p>
+    <button id="start-btn" onclick="startGame()">SPIEL STARTEN</button>
+  </div>
+
+  <script>
+    // --- 1. DREIDIMENSIONALE SZENE ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x38bdf8);
+    scene.fog = new THREE.FogExp2(0x38bdf8, 0.01);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(20, 40, 20);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+    function createClouds() {
+      const cloudGeo = new THREE.DodecahedronGeometry(3, 1);
+      const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+      for (let i = 0; i < 30; i++) {
+        const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+        cloud.position.set((Math.random() - 0.5) * 120, Math.random() * 15 + 10, -Math.random() * 400);
+        scene.add(cloud);
+      }
+    }
+    createClouds();
+
+    // --- 2. GAME STATE & VARIABLEN ---
+    let gameState = 'MENU';
+    let level = 1;
+    let baseSpeed = 0.18;
+    let currentSpeed = baseSpeed;
+    let playerX = 0, playerZ = 0;
+    let crowd = [], enemies = [], gates = [], particles = [];
+
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    // --- 3. ANIMIERTE STICKMAN FIGUR ---
+    function createStickman(colorHex) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), mat);
+      head.position.y = 0.9;
+      
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5), mat);
+      body.position.y = 0.55;
+
+      const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4), mat);
+      leftLeg.position.set(-0.1, 0.2, 0);
+      
+      const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4), mat);
+      rightLeg.position.set(0.1, 0.2, 0);
+
+      group.add(head, body, leftLeg, rightLeg);
+      group.userData = { leftLeg, rightLeg };
+      return group;
+    }
+
+    function addPlayerMember() {
+      const member = createStickman(0x2563eb);
+      const angle = crowd.length * 0.5;
+      const radius = Math.sqrt(crowd.length) * 0.25;
+      member.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+      playerGroup.add(member);
+      crowd.push(member);
+      document.getElementById('count-txt').innerText = crowd.length;
+    }
+
+    function removePlayerMember() {
+      if (crowd.length > 0) {
+        const removed = crowd.pop();
+        spawnParticles(playerGroup.position.clone().add(removed.position), 0x2563eb, 3);
+        playerGroup.remove(removed);
+        document.getElementById('count-txt').innerText = crowd.length;
+      }
+    }
+
+    // --- 4. PARTIKEL-SYSTEM ---
+    function spawnParticles(pos, colorHex, count = 15) {
+      const pGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+      const pMat = new THREE.MeshBasicMaterial({ color: colorHex });
+
+      for (let i = 0; i < count; i++) {
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+        const velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.4,
+          Math.random() * 0.4 + 0.1,
+          (Math.random() - 0.5) * 0.4
+        );
+        scene.add(p);
+        particles.push({ mesh: p, vel: velocity, life: 1.0 });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.mesh.position.add(p.vel);
+        p.life -= 0.03;
+        p.mesh.scale.multiplyScalar(0.95);
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    // --- 5. TEXTUREN & LEVEL-GENERATION ---
+    function createTextTexture(text, isGood) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = isGood ? '#10b981' : '#ef4444';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'Bold 44px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 64, 64);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function getRandomGateSpec(forceGood = false) {
+      const types = forceGood ? ['add', 'mult'] : ['add', 'mult', 'sub', 'div'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      let val = 1;
+
+      if (type === 'add') val = Math.floor(Math.random() * 10) + 1;        
+      else if (type === 'mult') val = Math.floor(Math.random() * 4) + 2;   
+      else if (type === 'sub') val = Math.floor(Math.random() * 10) + 1;   
+      else if (type === 'div') val = Math.floor(Math.random() * 3) + 2;   
+
+      return { type, val };
+    }
+
+    const trackWidth = 6;
+    let trackLength = 100;
+    let trackMesh;
+
+    function buildLevel() {
+      gates.forEach(g => scene.remove(g.mesh));
+      enemies.forEach(e => scene.remove(e.group));
+      gates = []; enemies = [];
+      if (trackMesh) scene.remove(trackMesh);
+
+      currentSpeed = baseSpeed + (level - 1) * 0.02;
+      document.getElementById('level-txt').innerText = level;
+
+      const gatePairsCount = 2 + level; 
+      const gateSpacing = 35;
+      trackLength = (gatePairsCount + 2) * gateSpacing;
+
+      const trackGeo = new THREE.BoxGeometry(trackWidth, 0.1, trackLength);
+      const trackMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9 });
+      trackMesh = new THREE.Mesh(trackGeo, trackMat);
+      trackMesh.position.z = -trackLength / 2;
+      scene.add(trackMesh);
+
+      let estimatedCrowd = 1;
+
+      // Tore erzeugen
+      for (let i = 0; i < gatePairsCount; i++) {
+        const z = -35 - (i * gateSpacing);
+        
+        const goodSpec = getRandomGateSpec(true);
+        const otherSpec = getRandomGateSpec(false);
+
+        const isGoodLeft = Math.random() > 0.5;
+        const leftSpec = isGoodLeft ? goodSpec : otherSpec;
+        const rightSpec = isGoodLeft ? otherSpec : goodSpec;
+
+        const gateSpecs = [
+          { x: -1.5, ...leftSpec },
+          { x: 1.5, ...rightSpec }
+        ];
+
+        gateSpecs.forEach(spec => {
+          let label = '';
+          const isGood = spec.type === 'add' || spec.type === 'mult';
+          if (spec.type === 'add') label = `+${spec.val}`;
+          else if (spec.type === 'mult') label = `x${spec.val}`;
+          else if (spec.type === 'sub') label = `-${spec.val}`;
+          else if (spec.type === 'div') label = `÷${spec.val}`;
+
+          const gateMat = new THREE.MeshStandardMaterial({ map: createTextTexture(label, isGood), transparent: true, opacity: 0.9 });
+          const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 0.1), gateMat);
+          gateMesh.position.set(spec.x, 1.1, z);
+          scene.add(gateMesh);
+          gates.push({ mesh: gateMesh, type: spec.type, value: spec.val, active: true });
+        });
+
+        if (goodSpec.type === 'mult') estimatedCrowd *= goodSpec.val;
+        else estimatedCrowd += goodSpec.val;
+      }
+
+      // Rote Gegner-Armee am Ende der Strecke
+      const endEnemyZ = -trackLength + 20;
+      const enemyCount = Math.max(6, Math.floor(estimatedCrowd * 0.75) + level * 3);
+      const enemyGroup = new THREE.Group();
+      enemyGroup.userData = { members: [] };
+
+      for (let i = 0; i < enemyCount; i++) {
+        const enemy = createStickman(0xef4444);
+        const angle = i * 0.5;
+        const radius = Math.sqrt(i) * 0.25;
+        enemy.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+        enemyGroup.add(enemy);
+        enemyGroup.userData.members.push(enemy);
+      }
+
+      enemyGroup.position.set(0, 0, endEnemyZ);
+      scene.add(enemyGroup);
+      enemies.push({ group: enemyGroup, count: enemyCount });
+    }
+
+    // --- 6. GAME STEUERUNG & LOOPS ---
+    let targetX = 0;
+    window.addEventListener('mousemove', (e) => {
+      if (gameState === 'PLAYING') {
+        targetX = ((e.clientX / window.innerWidth) * 2 - 1) * (trackWidth / 2 - 0.5);
+      }
+    });
+
+    function resetPlayer() {
+      crowd.forEach(m => playerGroup.remove(m));
+      crowd = [];
+      playerZ = 0; playerX = 0;
+      addPlayerMember();
+    }
+
+    function startGame() {
+      document.getElementById('menu-screen').style.display = 'none';
+      document.getElementById('game-ui').style.display = 'block';
+      resetPlayer();
+      buildLevel();
+      gameState = 'PLAYING';
+    }
+
+    function showEndMenu(title, btnText) {
+      gameState = 'MENU';
+      document.getElementById('menu-title').innerText = title;
+      document.getElementById('menu-subtitle').innerText = `Erreichtes Level: ${level}`;
+      document.getElementById('start-btn').innerText = btnText;
+      document.getElementById('menu-screen').style.display = 'flex';
+      document.getElementById('game-ui').style.display = 'none';
+    }
+
+    let animTime = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      animTime += 0.15;
+
+      if (gameState === 'PLAYING') {
+        playerZ -= currentSpeed;
+        playerX += (targetX - playerX) * 0.1;
+        playerGroup.position.set(playerX, 0, playerZ);
+
+        camera.position.set(playerX * 0.3, 6, playerZ + 10);
+        camera.lookAt(playerX * 0.3, 1, playerZ - 2);
+
+        // Animation
+        crowd.forEach(m => {
+          m.userData.leftLeg.rotation.x = Math.sin(animTime) * 0.6;
+          m.userData.rightLeg.rotation.x = -Math.sin(animTime) * 0.6;
+        });
+
+        // Kollision Tore
+        gates.forEach(g => {
+          if (g.active && Math.abs(playerZ - g.mesh.position.z) < 0.8 && Math.abs(playerX - g.mesh.position.x) < 1.4) {
+            gates.filter(other => Math.abs(other.mesh.position.z - g.mesh.position.z) < 0.1).forEach(pair => {
+              pair.active = false;
+              pair.mesh.visible = false;
+            });
+
+            const isGood = g.type === 'add' || g.type === 'mult';
+            spawnParticles(g.mesh.position, isGood ? 0x10b981 : 0xef4444, 20);
+
+            let currentCount = crowd.length;
+            if (g.type === 'add') {
+              for (let i = 0; i < g.value; i++) addPlayerMember();
+            } else if (g.type === 'mult') {
+              let toAdd = currentCount * (g.value - 1);
+              for (let i = 0; i < toAdd; i++) addPlayerMember();
+            } else if (g.type === 'sub') {
+              for (let i = 0; i < g.value; i++) removePlayerMember();
+            } else if (g.type === 'div') {
+              let targetCount = Math.floor(currentCount / g.value);
+              let toRemove = currentCount - targetCount;
+              for (let i = 0; i < toRemove; i++) removePlayerMember();
+            }
+          }
+        });
+
+        // KOLLISION GEGNER (Sofortige Entscheidung)
+        enemies.forEach(e => {
+          if (e.count > 0 && Math.abs(playerZ - e.group.position.z) < 1.5) {
+            if (crowd.length < e.count) {
+              // VERLOREN: Du hast weniger Menschen als Rot -> Sofort tot!
+              spawnParticles(playerGroup.position, 0xef4444, 50);
+              crowd.forEach(m => playerGroup.remove(m));
+              crowd = [];
+              document.getElementById('count-txt').innerText = 0;
+            } else {
+              // GEWONNEN: Du hast mehr/gleich viele Menschen -> Besiegt die Horde & ziehe Gegnervanzahl ab
+              spawnParticles(e.group.position, 0xef4444, 30);
+              const cost = e.count;
+              for (let i = 0; i < cost; i++) {
+                removePlayerMember();
+              }
+              scene.remove(e.group);
+              e.count = 0;
+            }
+          }
+        });
+
+        // Prüfen auf Niederlage oder Sieg
+        if (crowd.length === 0) {
+          level = 1;
+          showEndMenu("GAME OVER", "NEU STARTEN");
+        } else if (playerZ < -trackLength) {
+          level++;
+          showEndMenu(`LEVEL ${level - 1} GESCHAFFT!`, "NÄCHSTES LEVEL");
+        }
+      } else {
+        camera.position.x = Math.sin(Date.now() * 0.0005) * 10;
+        camera.position.z = 10;
+        camera.lookAt(0, 0, 0);
+      }
+
+      updateParticles();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
