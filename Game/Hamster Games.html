@@ -58,8 +58,9 @@
             align-items: center;
             justify-content: center;
             z-index: 9999;
-            cursor: pointer;
             text-align: center;
+            padding: 24px;
+            overflow-y: auto;
         }
 
         #overlay h1 {
@@ -74,6 +75,57 @@
             background: rgba(255, 255, 255, 0.1);
             padding: 10px 20px;
             border-radius: 20px;
+        }
+
+        .legal-dialog {
+            width: min(760px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+            background: #202020;
+            border: 1px solid var(--accent-color);
+            border-radius: 14px;
+            text-align: left;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .legal-dialog h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .legal-dialog h2 {
+            color: var(--accent-hover);
+            font-size: 1.15rem;
+            margin: 22px 0 8px;
+        }
+
+        .legal-dialog p {
+            background: none;
+            border-radius: 0;
+            font-size: 0.98rem;
+            line-height: 1.55;
+            margin: 8px 0;
+            padding: 0;
+        }
+
+        .accept-button {
+            display: block;
+            width: 100%;
+            margin: 20px 0 28px;
+            padding: 22px 20px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--accent-color);
+            color: #fff;
+            cursor: pointer;
+            font-size: 1.35rem;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.45);
+        }
+
+        .accept-button:hover {
+            background: var(--accent-hover);
         }
 
         /* Header */
@@ -115,6 +167,21 @@
 
         .menu-btn:hover {
             background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sound-btn {
+            padding: 9px 12px;
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-color);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .sound-btn:hover {
+            background: var(--accent-color);
+            color: #fff;
         }
 
         /* Sidebar Navigation */
@@ -346,9 +413,26 @@
 </head>
 <body>
 
-    <div id="overlay" onclick="startApp()">
-        <h1>🐹 Hamster Games</h1>
-        <p>Klicken zum Starten & Musik aktivieren</p>
+    <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="legal-title">
+        <div class="legal-dialog">
+            <h1 id="legal-title">🐹 Hamster Games</h1>
+            <p>Bitte lies die folgenden rechtlichen Informationen. Die Website kann bestimmte Nutzerdaten lokal in deinem Browser speichern.</p>
+            <button class="accept-button" type="button" onclick="acceptLegalNotice()">Akzeptieren &amp; Sound aktivieren</button>
+
+            <h2>AGB</h2>
+            <p>Hamster Games stellt kostenlos Spiele und weitere Inhalte zur privaten Nutzung bereit. Eine dauerhafte Verfügbarkeit, Fehlerfreiheit oder Kompatibilität wird nicht garantiert. Die Nutzung erfolgt auf eigene Verantwortung. Für verlinkte externe Inhalte sind sie verantwortlich.</p>
+
+            <h2>Datenschutzerklärung</h2>
+            <p>Verantwortlich: Hamster Games, Kontakt: <a href="mailto:pemil.hamster@gmail.com">pemil.hamster@gmail.com</a>. Diese GitHub-Pages-Website verarbeitet keine Konten und fordert keine Namen an. Deine Zustimmung und lokale Einstellungen werden ausschließlich über den Browser-Speicher (localStorage) auf deinem Gerät gespeichert. Beim Aufruf können GitHub Pages, GitHub sowie eingebundene externe Dienste (zum Beispiel GitHub Raw und SoundCloud) technisch notwendige Verbindungsdaten verarbeiten. Bitte beachte deren eigene Datenschutzerklärungen.</p>
+            <p>Du kannst den Browser-Speicher jederzeit über die Einstellungen deines Browsers löschen. Danach wird die Zustimmung erneut abgefragt. Eine Übertragung deiner Zustimmung in eine serverseitige Datei ist auf einer rein statischen GitHub-Pages-Seite technisch nicht möglich.</p>
+
+            <h2>Nutzungsrichtlinien</h2>
+            <p>Nutze die Website nur rechtmäßig und störe weder die Website noch externe Dienste. Veröffentliche keine persönlichen Daten anderer Personen und beachte bei externen Spielen, Bildern, Musik und Links die jeweiligen Rechte und Nutzungsbedingungen.</p>
+
+            <h2>Hinweise</h2>
+            <p>Die Inhalte dienen der Unterhaltung und ersetzen keine professionelle Beratung. Minderjährige sollten die Website nur mit Zustimmung ihrer Erziehungsberechtigten nutzen. Diese Informationen können bei Änderungen der Website oder der Rechtslage angepasst werden.</p>
+
+        </div>
     </div>
 
     <audio id="bg-music" loop>
@@ -356,7 +440,7 @@
     </audio>
 
     <header>
-        <div style="width: 40px;"></div>
+        <button class="sound-btn" type="button" onclick="activateSound()">🔊 Sound aktivieren</button>
         <h1>🐹 Hamster Games 🎮</h1>
         <button class="menu-btn" onclick="toggleSidebar()">☰</button>
     </header>
@@ -486,9 +570,25 @@
     </div>
 
     <script>
-        function startApp() {
+        const legalStorageKey = 'hamsterGamesLegalAcceptedV1';
+
+        function acceptLegalNotice() {
+            localStorage.setItem(legalStorageKey, JSON.stringify({
+                accepted: true,
+                acceptedAt: new Date().toISOString()
+            }));
+            startApp();
+        }
+
+        function activateSound() {
             const audio = document.getElementById('bg-music');
-            audio.play().catch(e => console.log("Audio Fehler:", e));
+            audio.play().then(() => {
+                document.querySelector('.sound-btn').textContent = '🔊 Sound läuft';
+            }).catch(e => console.log("Audio Fehler:", e));
+        }
+
+        function startApp() {
+            activateSound();
 
             const overlay = document.getElementById('overlay');
             overlay.style.transition = "opacity 0.5s";
@@ -496,6 +596,10 @@
             setTimeout(() => {
                 overlay.style.display = 'none';
             }, 500);
+        }
+
+        if (localStorage.getItem(legalStorageKey)) {
+            document.getElementById('overlay').style.display = 'none';
         }
 
         function toggleSidebar() {

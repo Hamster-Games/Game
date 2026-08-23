@@ -1,0 +1,10 @@
+Hamster Games - Users.txt
+
+Wichtiger technischer Hinweis:
+GitHub Pages ist ein statischer Hosting-Dienst. Eine HTML-Seite kann diese Datei nicht sicher oder dauerhaft aus dem Browser heraus beschreiben. Deshalb wird die Zustimmung auf der Website lokal im Browser unter dem Schluessel "hamsterGamesLegalAcceptedV1" gespeichert.
+
+Wenn spaeter ein Server-Backend eingerichtet wird, kann es Bestaetigungen beispielsweise in diesem Format speichern:
+acceptedAt=<ISO-8601-Zeitstempel>
+legalVersion=V1
+
+Keine personenbezogenen Daten in diese Datei eintragen, solange kein geschuetztes Backend und kein passendes Loesch- und Datenschutzkonzept vorhanden sind.
