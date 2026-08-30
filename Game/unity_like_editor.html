@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Studio Engine Pro - Fixed Export & Physics</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { display: flex; height: 100vh; background: #181818; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        
+        /* LEFT PANEL STYLES */
+        #left-panel { width: 350px; background: #252526; padding: 14px; display: flex; flex-direction: column; gap: 10px; border-right: 2px solid #333; overflow-y: auto; z-index: 10; }
+        h2 { font-size: 1.1rem; color: #007acc; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        h3 { font-size: 0.82rem; color: #9cdcfe; text-transform: uppercase; margin-bottom: 6px; }
+        .group { background: #2d2d2d; padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3c3c3c; }
+        label { font-size: 0.78rem; color: #cccccc; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+        input[type="text"], input[type="number"], select { width: 100%; background: #3c3c3c; border: 1px solid #555; color: #fff; padding: 5px 8px; border-radius: 4px; font-size: 0.85rem; outline: none; }
+        input[type="color"] { border: none; width: 40px; height: 25px; cursor: pointer; background: transparent; }
+        
+        button { cursor: pointer; background: #0e639c; color: white; font-weight: bold; border: none; padding: 8px; border-radius: 4px; font-size: 0.85rem; transition: background 0.2s; }
+        button:hover { background: #1177bb; }
+        .btn-row { display: flex; gap: 6px; }
+        .btn-row button { flex: 1; }
+
+        #objectList { list-style: none; max-height: 120px; overflow-y: auto; background: #1e1e1e; border: 1px solid #444; border-radius: 4px; }
+        #objectList li { padding: 6px 8px; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid #2d2d2d; display: flex; justify-content: space-between; align-items: center; }
+        #objectList li:hover { background: #333; }
+        #objectList li.selected { background: #0e639c; font-weight: bold; }
+
+        /* WORKSPACE & VIEWPORT STYLES */
+        #workspace-container { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        #blocklyDiv { height: 45%; width: 100%; background: #181818; border-bottom: 2px solid #333; }
+        #viewport { height: 55%; width: 100%; position: relative; outline: none; background: #111; }
+        canvas { width: 100%; height: 100%; display: block; }
+        
+        /* GIZMO CONTROLS TOOLBAR */
+        #gizmoToolbar { position: absolute; top: 10px; right: 10px; z-index: 20; background: rgba(37,37,38,0.85); padding: 6px; border-radius: 6px; display: flex; gap: 6px; border: 1px solid #444; }
+        #gizmoToolbar button { background: #3c3c3c; padding: 6px 10px; font-size: 0.75rem; border: 1px solid #555; }
+        #gizmoToolbar button.active { background: #007acc; border-color: #007acc; }
+
+        /* GAME OVERLAY / WINDOW */
+        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 1000; flex-direction: column; }
+        #gameOverlayHeader { height: 40px; background: #252526; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; border-bottom: 1px solid #333; }
+        #gameCanvasContainer { flex-grow: 1; width: 100%; height: calc(100% - 40px); position: relative; }
+
+        /* UTILITY BUTTONS */
+        .danger-btn { background: #a93226; }
+        .danger-btn:hover { background: #c0392b; }
+        .play-btn { background: #28a745; padding: 10px; font-size: 0.95rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .play-btn.running { background: #d32f2f; }
+        .cam-btn { background: #6f42c1; }
+        .cam-btn:hover { background: #5a32a3; }
+        .export-btn { background: #d35400; }
+        .export-btn:hover { background: #e67e22; }
+
+        .prop-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+</head>
+<body>
+
+    <div id="left-panel">
+        <h2>3D Engine Studio</h2>
+
+        <button id="mainPlayBtn" class="play-btn">▶ Spiel Starten</button>
+        <button id="openGameWindowBtn" style="background:#17a2b8;">📺 Game Fenster (Vollbild)</button>
+
+        <div class="group">
+            <h3>💾 Speichern & Exportieren</h3>
+            <div class="btn-row">
+                <button id="saveProjectBtn">💾 Speichern</button>
+                <button id="loadProjectBtn">📂 Laden</button>
+            </div>
+            <input type="file" id="loadProjectInput" accept=".json" style="display:none;">
+            <button id="exportHtmlBtn" class="export-btn">🌐 HTML Spiel Exportieren</button>
+        </div>
+
+        <div class="group">
+            <h3>1. Objekte Erstellen</h3>
+            <div class="btn-row">
+                <button id="addCubeBtn">+ Würfel</button>
+                <button id="addSphereBtn">+ Kugel</button>
+            </div>
+            <div class="btn-row">
+                <button id="addCameraBtn" class="cam-btn">📷 Kamera</button>
+                <button id="addColliderBoxBtn" style="background:#e67e22;">📦 Collider</button>
+            </div>
+            <button id="addTerrainBtn" style="background:#2e7d32;">🏔️ Landschaft</button>
+        </div>
+
+        <div class="group">
+            <h3>2. Custom Import</h3>
+            <label>OBJ Modell: <input type="file" id="objInput" accept=".obj"></label>
+            <label>Textur Bild: <input type="file" id="textureInput" accept="image/*"></label>
+        </div>
+
+        <div class="group">
+            <h3>3. Objekte (<span id="objCountBadge">0</span>)</h3>
+            <ul id="objectList"></ul>
+        </div>
+
+        <div class="group" id="propertiesPanel" style="display:none;">
+            <h3 id="selectedObjName">Objekt Editor</h3>
+            
+            <label>Farbe: <input type="color" id="objColorPicker" value="#007acc"></label>
+
+            <label>Größe (Scale X / Y / Z):</label>
+            <div class="prop-grid">
+                <input type="number" id="scaleXInput" step="0.1" value="1">
+                <input type="number" id="scaleYInput" step="0.1" value="1">
+                <input type="number" id="scaleZInput" step="0.1" value="1">
+            </div>
+
+            <label>Position (X / Y / Z):</label>
+            <div class="prop-grid">
+                <input type="number" id="posXInput" step="0.5" value="0">
+                <input type="number" id="posYInput" step="0.5" value="0">
+                <input type="number" id="posZInput" step="0.5" value="0">
+            </div>
+
+            <label>Rotation Grad (X / Y / Z):</label>
+            <div class="prop-grid">
+                <input type="number" id="rotXInput" step="5" value="0">
+                <input type="number" id="rotYInput" step="5" value="0">
+                <input type="number" id="rotZInput" step="5" value="0">
+            </div>
+            
+            <label>Physik Aktivieren: 
+                <input type="checkbox" id="physicsToggle" style="width:auto;">
+            </label>
+            
+            <label>Solid / Collider: 
+                <input type="checkbox" id="colliderToggle" style="width:auto;" checked>
+            </label>
+
+            <div class="btn-row" style="margin-top: 6px;">
+                <button id="deleteObjBtn" class="danger-btn">🗑️ Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workspace-container">
+        <div id="blocklyDiv"></div>
+        <div id="viewport" tabindex="0">
+            <div id="gizmoToolbar">
+                <button id="gizmoMoveBtn" class="active">🏹 Verschieben (Pfeile)</button>
+                <button id="gizmoRotateBtn">🔄 Drehen</button>
+                <button id="gizmoScaleBtn">📐 Skalieren</button>
+            </div>
+        </div>
+
+        <div id="gameOverlay">
+            <div id="gameOverlayHeader">
+                <span style="font-weight:bold; color:#007acc;">🎮 Spiel Modus</span>
+                <button id="closeGameWindowBtn" class="danger-btn" style="padding: 4px 10px;">Schließen</button>
+            </div>
+            <div id="gameCanvasContainer"></div>
+        </div>
+    </div>
+
+    <xml id="toolbox" style="display: none">
+        <category name="🎮 Steuerung" colour="#FFAB19">
+            <block type="event_on_update"></block>
+            <block type="event_key_pressed"></block>
+            <block type="event_on_collision"></block>
+        </category>
+        <category name="🏃 Bewegung" colour="#4C97FF">
+            <block type="move_forward"></block>
+            <block type="rotate_object"></block>
+            <block type="jump_object"></block>
+            <block type="set_position"></block>
+            <block type="set_scale"></block>
+        </category>
+        <category name="🎨 Aussehen" colour="#9966FF">
+            <block type="set_visibility"></block>
+            <block type="set_color"></block>
+        </category>
+        <category name="🔊 Sound & Effekte" colour="#CF63CF">
+            <block type="play_beep"></block>
+        </category>
+        <category name="🔀 Logik & Mathe" colour="#59C059">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="math_number"></block>
+            <block type="math_arithmetic"></block>
+            <block type="math_random_int"></block>
+        </category>
+        <category name="🎥 Kamera" colour="#FF6680">
+            <block type="camera_follow"></block>
+            <block type="switch_camera"></block>
+        </category>
+    </xml>
+
+    <script>
+        /* ========================================================================
+           1. THREE.JS & TRANSFORM CONTROLS SETUP
+           ======================================================================== */
+        const container = document.getElementById('viewport');
+        const gameCanvasContainer = document.getElementById('gameCanvasContainer');
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x121212);
+
+        const mainCamera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        mainCamera.position.set(0, 6, 12);
+
+        let activeCamera = mainCamera;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(mainCamera, renderer.domElement);
+
+        // TRANSFORM CONTROLS (GIZMO)
+        const transformControls = new THREE.TransformControls(mainCamera, renderer.domElement);
+        scene.add(transformControls);
+
+        transformControls.addEventListener('dragging-changed', function (event) {
+            controls.enabled = !event.value;
+        });
+
+        transformControls.addEventListener('change', function () {
+            if (selectedObject) {
+                document.getElementById('posXInput').value = selectedObject.mesh.position.x.toFixed(1);
+                document.getElementById('posYInput').value = selectedObject.mesh.position.y.toFixed(1);
+                document.getElementById('posZInput').value = selectedObject.mesh.position.z.toFixed(1);
+
+                document.getElementById('scaleXInput').value = selectedObject.mesh.scale.x.toFixed(1);
+                document.getElementById('scaleYInput').value = selectedObject.mesh.scale.y.toFixed(1);
+                document.getElementById('scaleZInput').value = selectedObject.mesh.scale.z.toFixed(1);
+
+                document.getElementById('rotXInput').value = THREE.MathUtils.radToDeg(selectedObject.mesh.rotation.x).toFixed(0);
+                document.getElementById('rotYInput').value = THREE.MathUtils.radToDeg(selectedObject.mesh.rotation.y).toFixed(0);
+                document.getElementById('rotZInput').value = THREE.MathUtils.radToDeg(selectedObject.mesh.rotation.z).toFixed(0);
+
+                if (selectedObject.body) {
+                    selectedObject.body.position.copy(selectedObject.mesh.position);
+                    selectedObject.body.quaternion.copy(selectedObject.mesh.quaternion);
+                    updatePhysicsShape(selectedObject);
+                }
+            }
+        });
+
+        // LICHTER & SZENE
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 15);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // CANNON.JS PHYSIK SETUP
+        const world = new CANNON.World();
+        world.gravity.set(0, -18.0, 0);
+
+        const groundBody = new CANNON.Body({ mass: 0, shape: new CANNON.Plane() });
+        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(groundBody);
+
+        scene.add(new THREE.GridHelper(40, 40, 0x007acc, 0x333333));
+
+        // ENGINE STATUS VARIABLEN
+        let objects = [];
+        let cameraObjects = [];
+        let selectedObject = null;
+        let objectCounter = 0;
+        let isGameRunning = false;
+        let gameWindowOpen = false;
+        let isUpdatingWorkspace = false;
+
+        // TASTATUR ABFRAGE ENGINE
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
+
+        // AUDIO SYNTHESIZER BEIP
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSoundBeep(freq = 440, type = 'sine', duration = 0.15) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        /* ========================================================================
+           2. DYNAMISCHE HITBOX & FLÜSSIGE ROTATION
+           ======================================================================== */
+        
+        function updatePhysicsShape(objData) {
+            if (!objData || !objData.body) return;
+
+            const bbox = new THREE.Box3().setFromObject(objData.mesh);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+
+            objData.body.shapes = [];
+            objData.body.shapeOffsets = [];
+            objData.body.shapeOrientations = [];
+
+            if (objData.shapeType === 'sphere') {
+                const radius = Math.max(size.x, size.y, size.z) / 2;
+                objData.body.addShape(new CANNON.Sphere(radius));
+            } else {
+                const halfExtents = new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2);
+                objData.body.addShape(new CANNON.Box(halfExtents));
+            }
+
+            objData.body.updateBoundingRadius();
+        }
+
+        function applySmoothRotation(target, degAngle) {
+            const rad = THREE.MathUtils.degToRad(degAngle);
+            target.mesh.rotateY(rad);
+            if (target.body) {
+                target.body.quaternion.copy(target.mesh.quaternion);
+            }
+        }
+
+        /* ========================================================================
+           3. RESET ENGINE: SPEICHERN & WIEDERHERSTELLEN DER STARTPOSITIONEN
+           ======================================================================== */
+
+        function saveInitialTransformState() {
+            objects.forEach(obj => {
+                obj.initialState = {
+                    position: obj.mesh.position.clone(),
+                    quaternion: obj.mesh.quaternion.clone(),
+                    scale: obj.mesh.scale.clone()
+                };
+            });
+        }
+
+        function resetToInitialTransformState() {
+            objects.forEach(obj => {
+                if (obj.initialState) {
+                    obj.mesh.position.copy(obj.initialState.position);
+                    obj.mesh.quaternion.copy(obj.initialState.quaternion);
+                    obj.mesh.scale.copy(obj.initialState.scale);
+
+                    if (obj.body) {
+                        obj.body.position.copy(obj.initialState.position);
+                        obj.body.quaternion.copy(obj.initialState.quaternion);
+                        obj.body.velocity.set(0, 0, 0);
+                        obj.body.angularVelocity.set(0, 0, 0);
+                    }
+                    updatePhysicsShape(obj);
+                }
+            });
+        }
+
+        /* ========================================================================
+           4. BLOCKLY BLÖCKE & GENERATOREN DEFINITION
+           ======================================================================== */
+        
+        Blockly.Blocks['event_on_update'] = {
+            init: function() {
+                this.appendDummyInput().appendField("🔄 Wenn Spiel läuft (Loop)");
+                this.appendStatementInput("STACK");
+                this.setColour(40);
+            }
+        };
+
+        Blockly.Blocks['event_key_pressed'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Falls Taste")
+                    .appendField(new Blockly.FieldDropdown([
+                        ["W", "w"], ["A", "a"], ["S", "s"], ["D", "d"], 
+                        ["Leertaste", " "], ["Pfeil Oben", "arrowup"], ["Pfeil Unten", "arrowdown"],
+                        ["Pfeil Links", "arrowleft"], ["Pfeil Rechts", "arrowright"]
+                    ]), "KEY")
+                    .appendField("gedrückt");
+                this.appendStatementInput("DO");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(40);
+            }
+        };
+
+        Blockly.Blocks['event_on_collision'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("💥 Wenn Berührt")
+                    .appendField(new Blockly.FieldTextInput("Würfel_1"), "TARGET_NAME");
+                this.appendStatementInput("DO");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(30);
+            }
+        };
+
+        Blockly.Blocks['move_forward'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Bewege ").appendField(new Blockly.FieldNumber(0.1, -100, 100), "SPEED").appendField("Schritte");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(210);
+            }
+        };
+
+        Blockly.Blocks['rotate_object'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Drehe Y um Grad: ").appendField(new Blockly.FieldNumber(3, -360, 360), "DEG");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(210);
+            }
+        };
+
+        Blockly.Blocks['jump_object'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Springe mit Kraft: ").appendField(new Blockly.FieldNumber(8), "FORCE");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(210);
+            }
+        };
+
+        Blockly.Blocks['set_position'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Setze Pos X:")
+                    .appendField(new Blockly.FieldNumber(0), "X")
+                    .appendField("Y:")
+                    .appendField(new Blockly.FieldNumber(3), "Y")
+                    .appendField("Z:")
+                    .appendField(new Blockly.FieldNumber(0), "Z");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(210);
+            }
+        };
+
+        Blockly.Blocks['set_scale'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Setze Skalierung X:")
+                    .appendField(new Blockly.FieldNumber(1), "SX")
+                    .appendField("Y:")
+                    .appendField(new Blockly.FieldNumber(1), "SY")
+                    .appendField("Z:")
+                    .appendField(new Blockly.FieldNumber(1), "SZ");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(210);
+            }
+        };
+
+        Blockly.Blocks['set_visibility'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Objekt")
+                    .appendField(new Blockly.FieldDropdown([["Zeigen", "true"], ["Verstecken", "false"]]), "VIS");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(280);
+            }
+        };
+
+        Blockly.Blocks['set_color'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("Setze Farbe auf Hex:")
+                    .appendField(new Blockly.FieldTextInput("#ff0000"), "COLOR");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(280);
+            }
+        };
+
+        Blockly.Blocks['play_beep'] = {
+            init: function() {
+                this.appendDummyInput()
+                    .appendField("🔊 Spiele Ton mit Frequenz:")
+                    .appendField(new Blockly.FieldNumber(440, 100, 2000), "FREQ")
+                    .appendField("Hz");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(310);
+            }
+        };
+
+        Blockly.Blocks['camera_follow'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Hauptkamera folgen lassen");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(340);
+            }
+        };
+
+        Blockly.Blocks['switch_camera'] = {
+            init: function() {
+                this.appendDummyInput().appendField("Wechsle zu Kamera:").appendField(new Blockly.FieldTextInput("Kamera_1"), "CAM_NAME");
+                this.setPreviousStatement(true, null);
+                this.setNextStatement(true, null);
+                this.setColour(340);
+            }
+        };
+
+        /* GENERATOREN */
+        javascript.javascriptGenerator.forBlock['event_on_update'] = function(block) {
+            return javascript.javascriptGenerator.statementToCode(block, 'STACK');
+        };
+
+        javascript.javascriptGenerator.forBlock['event_key_pressed'] = function(block) {
+            var key = block.getFieldValue('KEY');
+            var branch = javascript.javascriptGenerator.statementToCode(block, 'DO');
+            return 'if(keysPressed["' + key + '"]) {\n' + branch + '}\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['event_on_collision'] = function(block) {
+            var targetName = block.getFieldValue('TARGET_NAME');
+            var branch = javascript.javascriptGenerator.statementToCode(block, 'DO');
+            return 'if(checkCollision(target, "' + targetName + '")) {\n' + branch + '}\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['move_forward'] = function(block) {
+            var speed = parseFloat(block.getFieldValue('SPEED'));
+            return 'target.mesh.translateZ(-(' + speed + ')); if(target.body) { target.body.position.copy(target.mesh.position); }\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['rotate_object'] = function(block) {
+            var deg = parseFloat(block.getFieldValue('DEG'));
+            return 'applySmoothRotation(target, ' + deg + ');\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['jump_object'] = function(block) {
+            var force = parseFloat(block.getFieldValue('FORCE'));
+            return 'if(target.body && Math.abs(target.body.velocity.y) < 0.1) { target.body.velocity.y = ' + force + '; }\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['set_position'] = function(block) {
+            var x = parseFloat(block.getFieldValue('X'));
+            var y = parseFloat(block.getFieldValue('Y'));
+            var z = parseFloat(block.getFieldValue('Z'));
+            return 'target.mesh.position.set(' + x + ',' + y + ',' + z + '); if(target.body) { target.body.position.set(' + x + ',' + y + ',' + z + '); target.body.velocity.set(0,0,0); }\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['set_scale'] = function(block) {
+            var sx = parseFloat(block.getFieldValue('SX'));
+            var sy = parseFloat(block.getFieldValue('SY'));
+            var sz = parseFloat(block.getFieldValue('SZ'));
+            return 'target.mesh.scale.set(' + sx + ',' + sy + ',' + sz + '); updatePhysicsShape(target);\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['set_visibility'] = function(block) {
+            var vis = block.getFieldValue('VIS');
+            return 'target.mesh.visible = ' + vis + ';\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['set_color'] = function(block) {
+            var color = block.getFieldValue('COLOR');
+            return 'target.mesh.traverse(child => { if(child.isMesh && child.material) child.material.color.set("' + color + '"); });\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['play_beep'] = function(block) {
+            var freq = parseFloat(block.getFieldValue('FREQ'));
+            return 'playSoundBeep(' + freq + ');\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['camera_follow'] = function(block) {
+            return 'mainCamera.position.set(target.mesh.position.x, target.mesh.position.y + 5, target.mesh.position.z + 10); if(controls) controls.target.copy(target.mesh.position);\n';
+        };
+
+        javascript.javascriptGenerator.forBlock['switch_camera'] = function(block) {
+            var camName = block.getFieldValue('CAM_NAME');
+            return 'switchCameraByName("' + camName + '");\n';
+        };
+
+        const workspace = Blockly.inject('blocklyDiv', {
+            toolbox: document.getElementById('toolbox'),
+            scrollbars: true,
+            theme: Blockly.Themes.Classic
+        });
+
+        workspace.addChangeListener((event) => {
+            if (isUpdatingWorkspace || !selectedObject) return;
+            const xml = Blockly.Xml.workspaceToDom(workspace);
+            selectedObject.blocklyXml = Blockly.Xml.domToText(xml);
+            compileObjectScript(selectedObject);
+        });
+
+        /* ========================================================================
+           5. HELPER & UTILITIES
+           ======================================================================== */
+        
+        function checkCollision(objA, targetName) {
+            const objB = objects.find(o => o.name === targetName);
+            if (!objA || !objB) return false;
+
+            const boxA = new THREE.Box3().setFromObject(objA.mesh);
+            const boxB = new THREE.Box3().setFromObject(objB.mesh);
+            return boxA.intersectsBox(boxB);
+        }
+
+        function switchCameraByName(camName) {
+            if (camName === "Hauptkamera" || camName === "Main") {
+                activeCamera = mainCamera;
+                return;
+            }
+            const foundCamObj = cameraObjects.find(c => c.name === camName);
+            if (foundCamObj && foundCamObj.camInstance) {
+                activeCamera = foundCamObj.camInstance;
+            }
+        }
+
+        function generateJsFromXml(xmlText) {
+            if (!xmlText) return '';
+            try {
+                const tempDiv = document.createElement('div');
+                const tempWs = Blockly.inject(tempDiv, {});
+                const dom = Blockly.utils.xml.textToDom(xmlText);
+                Blockly.Xml.domToWorkspace(dom, tempWs);
+                const code = javascript.javascriptGenerator.workspaceToCode(tempWs);
+                tempWs.dispose();
+                return code;
+            } catch (e) {
+                console.error("Fehler beim Generieren von Code aus XML:", e);
+                return '';
+            }
+        }
+
+        /* ========================================================================
+           6. 3D OBJECT MANAGEMENT & INSPECTOR BINDING
+           ======================================================================== */
+
+        function registerObject(name, mesh, body = null, shapeType = null, isCamera = false, type = 'mesh') {
+            objectCounter++;
+            const objName = `${name}_${objectCounter}`;
+
+            const objData = {
+                id: objectCounter,
+                name: objName,
+                type: type,
+                mesh: mesh,
+                body: body,
+                hasPhysics: !!body,
+                shapeType: shapeType,
+                isCollider: true,
+                isCamera: isCamera,
+                camInstance: null,
+                blocklyXml: null,
+                updateFunc: null,
+                initialState: null
+            };
+
+            if (isCamera) {
+                const camInstance = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                mesh.add(camInstance);
+                objData.camInstance = camInstance;
+                cameraObjects.push(objData);
+            }
+
+            objects.push(objData);
+            scene.add(mesh);
+            if (body) {
+                world.addBody(body);
+                updatePhysicsShape(objData);
+            }
+
+            updateHierarchyUI();
+            selectObject(objData);
+            return objData;
+        }
+
+        function updateHierarchyUI() {
+            const list = document.getElementById('objectList');
+            list.innerHTML = '';
+            document.getElementById('objCountBadge').innerText = objects.length;
+
+            objects.forEach(obj => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${obj.isCamera ? '📷' : '📦'} ${obj.name}</span>`;
+                if (selectedObject && selectedObject.id === obj.id) li.classList.add('selected');
+                li.onclick = () => selectObject(obj);
+                list.appendChild(li);
+            });
+        }
+
+        function selectObject(obj) {
+            selectedObject = obj;
+            updateHierarchyUI();
+
+            const propPanel = document.getElementById('propertiesPanel');
+            isUpdatingWorkspace = true;
+
+            if (obj) {
+                propPanel.style.display = 'flex';
+                document.getElementById('selectedObjName').innerText = obj.name;
+                document.getElementById('physicsToggle').checked = obj.hasPhysics;
+                document.getElementById('colliderToggle').checked = obj.isCollider;
+
+                transformControls.attach(obj.mesh);
+
+                document.getElementById('posXInput').value = obj.mesh.position.x;
+                document.getElementById('posYInput').value = obj.mesh.position.y;
+                document.getElementById('posZInput').value = obj.mesh.position.z;
+
+                document.getElementById('scaleXInput').value = obj.mesh.scale.x;
+                document.getElementById('scaleYInput').value = obj.mesh.scale.y;
+                document.getElementById('scaleZInput').value = obj.mesh.scale.z;
+
+                document.getElementById('rotXInput').value = THREE.MathUtils.radToDeg(obj.mesh.rotation.x).toFixed(0);
+                document.getElementById('rotYInput').value = THREE.MathUtils.radToDeg(obj.mesh.rotation.y).toFixed(0);
+                document.getElementById('rotZInput').value = THREE.MathUtils.radToDeg(obj.mesh.rotation.z).toFixed(0);
+
+                workspace.clear();
+                if (obj.blocklyXml) {
+                    try {
+                        const xml = Blockly.utils.xml.textToDom(obj.blocklyXml);
+                        Blockly.Xml.domToWorkspace(xml, workspace);
+                    } catch(e) {
+                        console.error("Fehler beim Laden der Blöcke:", e);
+                    }
+                }
+            } else {
+                propPanel.style.display = 'none';
+                transformControls.detach();
+                workspace.clear();
+            }
+
+            isUpdatingWorkspace = false;
+        }
+
+        function compileObjectScript(obj) {
+            if (!obj || !obj.blocklyXml) return;
+
+            const code = generateJsFromXml(obj.blocklyXml);
+            try {
+                obj.updateFunc = new Function(
+                    'target', 'keysPressed', 'mainCamera', 'controls', 'checkCollision', 'switchCameraByName', 'playSoundBeep', 'updatePhysicsShape', 'applySmoothRotation', code
+                );
+            } catch (e) {
+                console.error("Fehler beim Kompilieren von " + obj.name, e);
+                obj.updateFunc = null;
+            }
+        }
+
+        function compileAllScripts() {
+            objects.forEach(obj => compileObjectScript(obj));
+        }
+
+        /* ========================================================================
+           7. PROJEKT SPEICHERN, LADEN & EXPORTIEREN
+           ======================================================================== */
+
+        document.getElementById('saveProjectBtn').onclick = () => {
+            const projectData = objects.map(o => ({
+                name: o.name,
+                type: o.type,
+                shapeType: o.shapeType,
+                hasPhysics: o.hasPhysics,
+                isCamera: o.isCamera,
+                position: { x: o.mesh.position.x, y: o.mesh.position.y, z: o.mesh.position.z },
+                rotation: { x: o.mesh.rotation.x, y: o.mesh.rotation.y, z: o.mesh.rotation.z },
+                scale: { x: o.mesh.scale.x, y: o.mesh.scale.y, z: o.mesh.scale.z },
+                color: o.mesh.material ? '#' + o.mesh.material.color.getHexString() : '#ffffff',
+                blocklyXml: o.blocklyXml
+            }));
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = '3d_engine_project.json';
+            a.click();
+        };
+
+        document.getElementById('loadProjectBtn').onclick = () => {
+            document.getElementById('loadProjectInput').click();
+        };
+
+        document.getElementById('loadProjectInput').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = JSON.parse(event.target.result);
+                
+                objects.forEach(o => {
+                    scene.remove(o.mesh);
+                    if (o.body) world.remove(o.body);
+                });
+                objects = [];
+                cameraObjects = [];
+                selectedObject = null;
+                transformControls.detach();
+
+                data.forEach(item => {
+                    let mesh;
+                    if (item.type === 'sphere') {
+                        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), new THREE.MeshStandardMaterial({ color: item.color }));
+                    } else if (item.isCamera) {
+                        mesh = new THREE.Group();
+                        const camHelper = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 4), new THREE.MeshBasicMaterial({ color: 0x9966ff, wireframe: true }));
+                        camHelper.rotation.x = Math.PI / 2;
+                        mesh.add(camHelper);
+                    } else {
+                        mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: item.color }));
+                    }
+
+                    mesh.position.set(item.position.x, item.position.y, item.position.z);
+                    mesh.rotation.set(item.rotation.x, item.rotation.y, item.rotation.z);
+                    mesh.scale.set(item.scale.x, item.scale.y, item.scale.z);
+
+                    let body = null;
+                    if (item.hasPhysics) {
+                        body = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(item.position.x, item.position.y, item.position.z) });
+                    }
+
+                    const regObj = registerObject(item.name.split('_')[0], mesh, body, item.shapeType, item.isCamera, item.type);
+                    regObj.blocklyXml = item.blocklyXml;
+                    compileObjectScript(regObj);
+                });
+
+                selectObject(null);
+            };
+            reader.readAsText(file);
+        };
+
+        // EXPORT-FUNKTION INKL. BODEN UND GRAFIK-SHADOWS FIX
+        document.getElementById('exportHtmlBtn').onclick = () => {
+            compileAllScripts();
+
+            const exportedObjects = objects.map(o => ({
+                name: o.name,
+                type: o.type,
+                shapeType: o.shapeType,
+                hasPhysics: o.hasPhysics,
+                isCamera: o.isCamera,
+                position: o.mesh.position,
+                rotation: { x: o.mesh.rotation.x, y: o.mesh.rotation.y, z: o.mesh.rotation.z },
+                scale: o.mesh.scale,
+                color: o.mesh.material ? '#' + o.mesh.material.color.getHexString() : '#ffffff',
+                code: generateJsFromXml(o.blocklyXml)
+            }));
+
+            const standaloneHtml = `<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Mein 3D Spiel</title>
+    <style>body { margin: 0; overflow: hidden; background: #111; }</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"><\/script>
+</head>
+<body>
+    <script>
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x121212);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 6, 12);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Licht
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 15);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Grid-Helper
+        scene.add(new THREE.GridHelper(40, 40, 0x007acc, 0x333333));
+
+        // CANNON PHYSIK & BODEN (Verhindert unendliches Fallen!)
+        const world = new CANNON.World();
+        world.gravity.set(0, -18.0, 0);
+
+        const groundBody = new CANNON.Body({ mass: 0, shape: new CANNON.Plane() });
+        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(groundBody);
+
+        // Tastatur
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => { 
+            let key = e.key.toLowerCase();
+            if(key === 'arrowup') key = 'arrowup';
+            if(key === 'arrowdown') key = 'arrowdown';
+            if(key === 'arrowleft') key = 'arrowleft';
+            if(key === 'arrowright') key = 'arrowright';
+            if(key === ' ') key = ' ';
+            keysPressed[key] = true; 
+        });
+        window.addEventListener('keyup', (e) => { 
+            let key = e.key.toLowerCase();
+            keysPressed[key] = false; 
+        });
+
+        // Audio Beep Synthesizer
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSoundBeep(freq = 440, type = 'sine', duration = 0.15) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function applySmoothRotation(target, degAngle) {
+            const rad = THREE.MathUtils.degToRad(degAngle);
+            target.mesh.rotateY(rad);
+            if (target.body) target.body.quaternion.copy(target.mesh.quaternion);
+        }
+
+        function checkCollision(objA, targetName) {
+            const objB = gameObjects.find(o => o.name === targetName);
+            if (!objA || !objB) return false;
+            const boxA = new THREE.Box3().setFromObject(objA.mesh);
+            const boxB = new THREE.Box3().setFromObject(objB.mesh);
+            return boxA.intersectsBox(boxB);
+        }
+
+        const gameObjects = [];
+        const rawData = ${JSON.stringify(exportedObjects)};
+
+        rawData.forEach(item => {
+            let geometry = (item.type === 'sphere') ? new THREE.SphereGeometry(0.6, 32, 32) : new THREE.BoxGeometry(1, 1, 1);
+            let mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.4 }));
+            mesh.position.copy(item.position);
+            mesh.rotation.set(item.rotation.x, item.rotation.y, item.rotation.z);
+            mesh.scale.copy(item.scale);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+
+            let body = null;
+            if (item.hasPhysics) {
+                body = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(item.position.x, item.position.y, item.position.z) });
+                if (item.shapeType === 'sphere') {
+                    const radius = Math.max(item.scale.x, item.scale.y, item.scale.z) * 0.6 / 2;
+                    body.addShape(new CANNON.Sphere(radius));
+                } else {
+                    body.addShape(new CANNON.Box(new CANNON.Vec3(item.scale.x/2, item.scale.y/2, item.scale.z/2)));
+                }
+                world.addBody(body);
+            }
+
+            let updateFunc = null;
+            if (item.code) {
+                try {
+                    updateFunc = new Function('target', 'keysPressed', 'mainCamera', 'controls', 'checkCollision', 'switchCameraByName', 'playSoundBeep', 'updatePhysicsShape', 'applySmoothRotation', item.code);
+                } catch(e) {
+                    console.error("Fehler im Objekt-Code:", e);
+                }
+            }
+
+            gameObjects.push({ name: item.name, mesh: mesh, body: body, updateFunc: updateFunc });
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            world.step(1 / 60);
+
+            gameObjects.forEach(obj => {
+                if (obj.body) {
+                    obj.mesh.position.copy(obj.body.position);
+                    obj.mesh.quaternion.copy(obj.body.quaternion);
+                }
+                if (obj.updateFunc) {
+                    obj.updateFunc(obj, keysPressed, camera, null, checkCollision, () => {}, playSoundBeep, () => {}, applySmoothRotation);
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([standaloneHtml], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'mein_3d_spiel.html';
+            a.click();
+        };
+
+        /* ========================================================================
+           8. EVENT LISTENERS & UI LOGIK
+           ======================================================================== */
+
+        document.getElementById('gizmoMoveBtn').onclick = function() {
+            transformControls.setMode('translate');
+            setActiveGizmoBtn(this);
+        };
+        document.getElementById('gizmoRotateBtn').onclick = function() {
+            transformControls.setMode('rotate');
+            setActiveGizmoBtn(this);
+        };
+        document.getElementById('gizmoScaleBtn').onclick = function() {
+            transformControls.setMode('scale');
+            setActiveGizmoBtn(this);
+        };
+
+        function setActiveGizmoBtn(btn) {
+            document.querySelectorAll('#gizmoToolbar button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        document.getElementById('objColorPicker').oninput = (e) => {
+            if (selectedObject && selectedObject.mesh) {
+                selectedObject.mesh.traverse(child => {
+                    if (child.isMesh && child.material) child.material.color.set(e.target.value);
+                });
+            }
+        };
+
+        ['posXInput', 'posYInput', 'posZInput'].forEach(id => {
+            document.getElementById(id).onchange = () => {
+                if (!selectedObject) return;
+                const x = parseFloat(document.getElementById('posXInput').value);
+                const y = parseFloat(document.getElementById('posYInput').value);
+                const z = parseFloat(document.getElementById('posZInput').value);
+                selectedObject.mesh.position.set(x, y, z);
+                if (selectedObject.body) selectedObject.body.position.set(x, y, z);
+            };
+        });
+
+        ['rotXInput', 'rotYInput', 'rotZInput'].forEach(id => {
+            document.getElementById(id).onchange = () => {
+                if (!selectedObject) return;
+                const rx = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotXInput').value));
+                const ry = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotYInput').value));
+                const rz = THREE.MathUtils.degToRad(parseFloat(document.getElementById('rotZInput').value));
+                selectedObject.mesh.rotation.set(rx, ry, rz);
+                if (selectedObject.body) selectedObject.body.quaternion.copy(selectedObject.mesh.quaternion);
+            };
+        });
+
+        ['scaleXInput', 'scaleYInput', 'scaleZInput'].forEach(id => {
+            document.getElementById(id).onchange = () => {
+                if (!selectedObject) return;
+                const sx = parseFloat(document.getElementById('scaleXInput').value);
+                const sy = parseFloat(document.getElementById('scaleYInput').value);
+                const sz = parseFloat(document.getElementById('scaleZInput').value);
+                selectedObject.mesh.scale.set(sx, sy, sz);
+                updatePhysicsShape(selectedObject);
+            };
+        });
+
+        const playBtn = document.getElementById('mainPlayBtn');
+        playBtn.onclick = () => {
+            compileAllScripts();
+            isGameRunning = !isGameRunning;
+
+            if (isGameRunning) {
+                saveInitialTransformState();
+                playBtn.innerText = "⏹️ Spiel Stoppen";
+                playBtn.classList.add('running');
+                transformControls.detach();
+                container.focus();
+            } else {
+                resetToInitialTransformState();
+                playBtn.innerText = "▶ Spiel Starten";
+                playBtn.classList.remove('running');
+                activeCamera = mainCamera;
+                if (selectedObject) transformControls.attach(selectedObject.mesh);
+            }
+        };
+
+        document.getElementById('openGameWindowBtn').onclick = () => {
+            document.getElementById('gameOverlay').style.display = 'flex';
+            gameCanvasContainer.appendChild(renderer.domElement);
+            renderer.setSize(gameCanvasContainer.clientWidth, gameCanvasContainer.clientHeight);
+            gameWindowOpen = true;
+        };
+
+        document.getElementById('closeGameWindowBtn').onclick = () => {
+            document.getElementById('gameOverlay').style.display = 'none';
+            container.appendChild(renderer.domElement);
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            gameWindowOpen = false;
+        };
+
+        document.getElementById('deleteObjBtn').onclick = () => {
+            if (!selectedObject) return;
+            transformControls.detach();
+            scene.remove(selectedObject.mesh);
+            if (selectedObject.body) world.remove(selectedObject.body);
+            objects = objects.filter(o => o.id !== selectedObject.id);
+            cameraObjects = cameraObjects.filter(c => c.id !== selectedObject.id);
+            selectedObject = null;
+            selectObject(null);
+            updateHierarchyUI();
+        };
+
+        document.getElementById('physicsToggle').onchange = (e) => {
+            if (!selectedObject) return;
+            const enable = e.target.checked;
+            
+            if (enable && !selectedObject.body) {
+                const body = new CANNON.Body({ 
+                    mass: 1, 
+                    position: new CANNON.Vec3(selectedObject.mesh.position.x, selectedObject.mesh.position.y, selectedObject.mesh.position.z) 
+                });
+                body.quaternion.copy(selectedObject.mesh.quaternion);
+                selectedObject.body = body;
+                selectedObject.hasPhysics = true;
+                world.addBody(body);
+                updatePhysicsShape(selectedObject);
+            } else if (!enable && selectedObject.body) {
+                world.remove(selectedObject.body);
+                selectedObject.body = null;
+                selectedObject.hasPhysics = false;
+            }
+        };
+
+        /* ========================================================================
+           9. SPAWN & IMPORT ACTIONS
+           ======================================================================== */
+
+        document.getElementById('addCubeBtn').onclick = () => {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x007acc, roughness: 0.4 }));
+            mesh.position.set(0, 3, 0);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            const body = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(0, 3, 0) });
+            registerObject('Würfel', mesh, body, 'box', false, 'box');
+        };
+
+        document.getElementById('addSphereBtn').onclick = () => {
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.4 }));
+            mesh.position.set(0, 4, 0);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            const body = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(0, 4, 0) });
+            registerObject('Kugel', mesh, body, 'sphere', false, 'sphere');
+        };
+
+        document.getElementById('addCameraBtn').onclick = () => {
+            const group = new THREE.Group();
+            const camHelperMesh = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 4), new THREE.MeshBasicMaterial({ color: 0x9966ff, wireframe: true }));
+            camHelperMesh.rotation.x = Math.PI / 2;
+            group.add(camHelperMesh);
+            group.position.set(0, 3, 5);
+            registerObject('Kamera', group, null, null, true, 'camera');
+        };
+
+        document.getElementById('addColliderBoxBtn').onclick = () => {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshStandardMaterial({ color: 0xd35400, wireframe: true }));
+            mesh.position.set(3, 1, 0);
+            const body = new CANNON.Body({ mass: 0, position: new CANNON.Vec3(3, 1, 0) });
+            registerObject('Collider', mesh, body, 'box', false, 'box');
+        };
+
+        document.getElementById('addTerrainBtn').onclick = () => {
+            const geo = new THREE.PlaneGeometry(30, 30, 32, 32);
+            geo.rotateX(-Math.PI / 2);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                pos.setY(i, Math.sin(pos.getX(i) * 0.4) * Math.cos(pos.getZ(i) * 0.4) * 1.8);
+            }
+            geo.computeVertexNormals();
+            const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x2e7d32, flatShading: true }));
+            terrain.position.y = -0.1;
+            registerObject('Landschaft', terrain, null, null, false, 'mesh');
+        };
+
+        document.getElementById('objInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const loader = new THREE.OBJLoader();
+                const objGroup = loader.parse(event.target.result);
+                objGroup.position.set(0, 3, 0);
+
+                const body = new CANNON.Body({ mass: 1, position: new CANNON.Vec3(0, 3, 0) });
+                registerObject('OBJ_Modell', objGroup, body, 'box', false, 'obj');
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('textureInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || !selectedObject) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const tex = new THREE.TextureLoader().load(event.target.result);
+                selectedObject.mesh.traverse(child => { 
+                    if (child.isMesh) {
+                        child.material.map = tex; 
+                        child.material.needsUpdate = true; 
+                    }
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        /* ========================================================================
+           10. MAIN ANIMATION LOOP
+           ======================================================================== */
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isGameRunning) {
+                world.step(1 / 60);
+
+                objects.forEach(obj => {
+                    if (obj.hasPhysics && obj.body) {
+                        obj.mesh.position.copy(obj.body.position);
+                        obj.mesh.quaternion.copy(obj.body.quaternion);
+                    }
+
+                    if (typeof obj.updateFunc === 'function') {
+                        try {
+                            obj.updateFunc(obj, keysPressed, mainCamera, controls, checkCollision, switchCameraByName, playSoundBeep, updatePhysicsShape, applySmoothRotation);
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    }
+                });
+            }
+
+            controls.update();
+            renderer.render(scene, activeCamera);
+        }
+
+        window.addEventListener('resize', () => {
+            const targetContainer = gameWindowOpen ? gameCanvasContainer : container;
+            const w = targetContainer.clientWidth;
+            const h = targetContainer.clientHeight;
+
+            mainCamera.aspect = w / h;
+            mainCamera.updateProjectionMatrix();
+
+            cameraObjects.forEach(c => {
+                if (c.camInstance) {
+                    c.camInstance.aspect = w / h;
+                    c.camInstance.updateProjectionMatrix();
+                }
+            });
+
+            renderer.setSize(w, h);
+            Blockly.svgResize(workspace);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

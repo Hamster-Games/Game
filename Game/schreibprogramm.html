@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gustav Word Deluxe</title>
+  <style>
+    :root {
+      --primary: #2b579a;
+      --primary-hover: #1e3d6f;
+      --bg-color: #e8ecef;
+      --panel-bg: #ffffff;
+      --accent: #4a90e2;
+    }
+
+    * {
+      box-sizing: border-box;
+      transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Animated Header & Ribbon */
+    header {
+      background: linear-gradient(135deg, #1f3a60, #2b579a, #3b72c4);
+      background-size: 200% 200%;
+      animation: gradientBG 8s ease infinite;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Toolbar Container */
+    .toolbar {
+      background-color: var(--panel-bg);
+      padding: 10px 15px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 9;
+    }
+
+    /* Animated Buttons */
+    .btn, select, input[type="color"] {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fff;
+      color: #333;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      outline: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .btn:hover, select:hover {
+      background-color: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .btn-action {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+    }
+
+    .btn-action:hover {
+      background-color: #219150;
+    }
+
+    .separator {
+      height: 26px;
+      width: 2px;
+      background-color: #e0e0e0;
+      margin: 0 4px;
+      border-radius: 2px;
+    }
+
+    /* Workspace & Pages Area */
+    .workspace {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      scroll-behavior: smooth;
+    }
+
+    /* Animated A4 Page Sheet */
+    .editor-page {
+      width: 210mm;
+      min-height: 297mm;
+      background-color: white;
+      padding: 25mm 20mm;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      border-radius: 4px;
+      outline: none;
+      box-sizing: border-box;
+      position: relative;
+      animation: pagePop 0.5s ease-out forwards;
+    }
+
+    @keyframes pagePop {
+      0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .editor-page:focus-within {
+      box-shadow: 0 12px 40px rgba(43, 87, 154, 0.25);
+    }
+
+    /* Page Table Styling */
+    .editor-page table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    .editor-page table, .editor-page th, .editor-page td {
+      border: 1px solid #777;
+      padding: 8px;
+    }
+
+    .editor-page img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    /* Color picker button custom styling */
+    .color-picker {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      cursor: pointer;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    /* Floating Action / Add Page Button */
+    .floating-add-btn {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: linear-gradient(135deg, #2b579a, #4a90e2);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(43, 87, 154, 0.4);
+      z-index: 100;
+    }
+
+    .floating-add-btn:hover {
+      transform: scale(1.08) translateY(-3px);
+      box-shadow: 0 8px 25px rgba(43, 87, 154, 0.6);
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: white;
+        overflow: visible;
+      }
+      header, .toolbar, .floating-add-btn {
+        display: none !important;
+      }
+      .workspace {
+        padding: 0;
+        overflow: visible;
+      }
+      .editor-page {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="app-title">📝 Gustav Word Studio</div>
+    <div style="font-size: 12px; opacity: 0.9;">Pro-Textverarbeitung</div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn" onclick="format('undo')" title="Rückgängig">↩️</button>
+    <button class="btn" onclick="format('redo')" title="Wiederholen">↪️</button>
+
+    <div class="separator"></div>
+
+    <button class="btn" onclick="format('bold')" title="Fett"><b>B</b></button>
+    <button class="btn" onclick="format('italic')" title="Kursiv"><i>I</i></button>
+    <button class="btn" onclick="format('underline')" title="Unterstrichen"><u>U</u></button>
+    <button class="btn" onclick="format('strikeThrough')" title="Durchgestrichen"><s>S</s></button>
+
+    <div class="separator"></div>
+
+    <select onchange="format('fontName', this.value)">
+      <option value="Arial">Arial</option>
+      <option value="Calibri">Calibri</option>
+      <option value="Comic Sans MS">Comic Sans MS</option>
+      <option value="Courier New">Courier New</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Impact">Impact</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Verdana">Verdana</option>
+    </select>
+
+    <select onchange="format('fontSize', this.value)">
+      <option value="1">8 pt</option>
+      <option value="2">10 pt</option>
+      <option value="3" selected>12 pt</option>
+      <option value="4">14 pt</option>
+      <option value="5">18 pt</option>
+      <option value="6">24 pt</option>
+      <option value="7">36 pt</option>
+    </select>
+
+    <label style="font-size: 12px; font-weight: bold;" title="Textfarbe">Text: 
+      <input type="color" class="color-picker" onchange="format('foreColor', this.value)" value="#000000">
+    </label>
+    <label style="font-size: 12px; font-weight: bold;" title="Hintergrundfarbe">Markieren: 
+      <input type="color" class="color-picker" onchange="format('hiliteColor', this.value)" value="#ffffff">
+    </label>
+
+    <div class="separator"></div>
+
+    <button class="btn" onclick="format('justifyLeft')" title="Linksbündig">←</button>
+    <button class="btn" onclick="format('justifyCenter')" title="Zentriert">↔</button>
+    <button class="btn" onclick="format('justifyRight')" title="Rechtsbündig">→</button>
+    <button class="btn" onclick="format('justifyFull')" title="Blocksatz">≡</button>
+
+    <div class="separator"></div>
+
+    <button class="btn" onclick="insertImage()" title="Bild einfügen">🖼️ Bild</button>
+    <button class="btn" onclick="insertTable()" title="Tabelle einfügen">📊 Tabelle</button>
+
+    <div class="separator"></div>
+
+    <button class="btn btn-action" onclick="saveFile()">💾 Speichern (.gustav)</button>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">📂 Öffnen</button>
+    <button class="btn" onclick="printDoc()">🖨️ Drucken / PDF</button>
+
+    <input type="file" id="fileInput" accept=".gustav" style="display: none;" onchange="loadFile(event)">
+    <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+  </div>
+
+  <div class="workspace" id="workspace">
+    <div class="editor-page" contenteditable="true">
+      <h1 style="color: #2b579a;">Willkommen bei Gustav Word Studio!</h1>
+      <p>Dies ist deine neue interaktive Textverarbeitung im Browser.</p>
+      <ul>
+        <li>Mehrere A4-Seiten erstellen</li>
+        <li>Bilder & Tabellen einfügen</li>
+        <li>Als PDF drucken oder als <b>.gustav</b> speichern</li>
+      </ul>
+    </div>
+  </div>
+
+  <button class="floating-add-btn" onclick="addPage()">+ Neue Seite</button>
+
+  <script>
+    // Formatierungsbefehle ausführen
+    function format(command, value = null) {
+      document.execCommand(command, false, value);
+    }
+
+    // Neue A4-Seite hinzufügen
+    function addPage() {
+      const workspace = document.getElementById('workspace');
+      const newPage = document.createElement('div');
+      newPage.className = 'editor-page';
+      newPage.contentEditable = 'true';
+      newPage.innerHTML = '<p><br></p>';
+      workspace.appendChild(newPage);
+      newPage.focus();
+    }
+
+    // Bild hochladen & einfügen
+    function insertImage() {
+      document.getElementById('imageInput').click();
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          format('insertImage', e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Tabelle einfügen
+    function insertTable() {
+      const rows = prompt("Anzahl der Zeilen:", "3");
+      const cols = prompt("Anzahl der Spalten:", "3");
+
+      if (rows && cols) {
+        let tableHTML = '<table><tbody>';
+        for (let r = 0; r < parseInt(rows); r++) {
+          tableHTML += '<tr>';
+          for (let c = 0; c < parseInt(cols); c++) {
+            tableHTML += '<td>Zelle</td>';
+          }
+          tableHTML += '</tr>';
+        }
+        tableHTML += '</tbody></table><p><br></p>';
+        format('insertHTML', tableHTML);
+      }
+    }
+
+    // Als .gustav Datei speichern
+    function saveFile() {
+      const pages = document.querySelectorAll('.editor-page');
+      let fullContent = [];
+      pages.forEach(page => fullContent.push(page.innerHTML));
+
+      const data = JSON.stringify(fullContent);
+      const blob = new Blob([data], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'dokument.gustav';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    // .gustav Datei laden
+    function loadFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const contents = JSON.parse(e.target.result);
+          const workspace = document.getElementById('workspace');
+          workspace.innerHTML = ''; // Vorherige Seiten leeren
+
+          contents.forEach(htmlContent => {
+            const page = document.createElement('div');
+            page.className = 'editor-page';
+            page.contentEditable = 'true';
+            page.innerHTML = htmlContent;
+            workspace.appendChild(page);
+          });
+        } catch (err) {
+          alert("Fehler beim Laden der .gustav-Datei!");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Drucken / Als PDF speichern
+    function printDoc() {
+      window.print();
+    }
+  </script>
+
+</body>
+</html>

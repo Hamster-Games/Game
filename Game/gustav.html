@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gustav converter</title>
+  <style>
+    :root {
+      --bg: #030308;
+      --card-bg: rgba(13, 14, 27, 0.85);
+      --primary: #ffbb00;
+      --primary-glow: #ff6600;
+      --secondary: #f50000;
+      --accent-pink: #ff0000;
+      --text: #f8f9fa;
+      --text-muted: #6c757d;
+      --border: rgba(157, 78, 221, 0.25);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(157, 78, 221, 0.15), transparent 70%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* --- OVERLAY LADESCREEN --- */
+    #loaderOverlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(3, 3, 8, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease, visibility 0.5s;
+    }
+
+    .loader-title {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 6px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: hueRotate 3s infinite linear;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar-container {
+      width: 320px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.1s linear;
+    }
+
+    .loader-text {
+      margin-top: 15px;
+      font-family: monospace;
+      color: var(--secondary);
+      font-size: 0.85rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      animation: floatHeader 4s ease-in-out infinite;
+    }
+
+    h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: 12px;
+      margin: 0;
+      background: linear-gradient(135deg, #fff 0%, var(--primary-glow) 50%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-family: monospace;
+      letter-spacing: 3px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    .panel-container {
+      width: 100%;
+      max-width: 650px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 35px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-top: 0;
+      margin-bottom: 25px;
+      color: #fff;
+    }
+
+    /* --- PREVIEW BOX --- */
+    .preview-wrapper {
+      width: 100%;
+      min-height: 200px;
+      max-height: 350px;
+      border-radius: 16px;
+      border: 2px dashed var(--border);
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      overflow: hidden;
+      padding: 15px;
+      position: relative;
+    }
+
+    .preview-wrapper img, .preview-wrapper video {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    .preview-wrapper audio {
+      width: 90%;
+    }
+
+    .preview-placeholder {
+      color: var(--text-muted);
+      font-family: monospace;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    /* --- FORM CONTROLS --- */
+    .input-group {
+      width: 100%;
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-group label {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--secondary);
+    }
+
+    .text-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: #fff;
+      padding: 12px 16px;
+      font-family: var(--font);
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .text-input:focus {
+      border-color: var(--secondary);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--primary), #7b2cbf);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(157, 78, 221, 0.4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(157, 78, 221, 0.7);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #00f5d4, #00bbf9);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(0, 245, 212, 0.3);
+    }
+
+    input[type="file"] { display: none; }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--secondary);
+      font-family: monospace;
+      font-size: 11px;
+      padding: 10px;
+      resize: none;
+      outline: none;
+      margin-top: 15px;
+    }
+
+    .status-badge {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    @keyframes floatHeader {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes hueRotate {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loaderOverlay">
+    <div class="loader-title">GUSTAV Converter</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="loaderFill"></div>
+    </div>
+    <div class="loader-text" id="loaderText">Initializing Universal Container...</div>
+  </div>
+
+  <header>
+    <h1>GUSTAV.exe</h1>
+    <div class="subtitle">[ Converter der jede datei in .gustav umwandeln kann ]</div>
+  </header>
+
+  <div class="panel-container">
+    <div class="card">
+      <div class="card-title">📦 Converter</div>
+
+      <div class="preview-wrapper" id="previewContainer">
+        <div class="preview-placeholder" id="previewPlaceholder">
+          [ Datei auswählen oder .gustav laden für Vorschau ]
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="customNameInput">Eigener Dateiname (optional):</label>
+        <input type="text" id="customNameInput" class="text-input" placeholder="MeinName (ohne Endung)">
+      </div>
+
+      <div class="controls">
+        <label for="anyFileInput" class="btn">Datei ▶ .gustav</label>
+        <input type="file" id="anyFileInput">
+
+        <label for="gustavInput" class="btn btn-green">.gustav Öffnen</label>
+        <input type="file" id="gustavInput" accept=".gustav">
+      </div>
+
+      <div class="controls" id="exportBox" style="display: none; margin-top: 15px;">
+        <button id="downloadRestoredBtn" class="btn btn-green">Original-Datei Entpacken</button>
+      </div>
+
+      <textarea id="fileDataInfo" readonly placeholder="// Raw Code & Metadata Stream..."></textarea>
+      <div id="fileStatus" class="status-badge">Warte auf Eingabe...</div>
+    </div>
+  </div>
+
+  <script>
+    // --- LADESCREEN LOGIK ---
+    const loaderOverlay = document.getElementById('loaderOverlay');
+    const loaderFill = document.getElementById('loaderFill');
+    const loaderText = document.getElementById('loaderText');
+
+    const fakeMessages = [
+      "Building Binary Preview...",
+      "Encoding Custom Metadata Name...",
+      "Packaging Gustav Stream...",
+      "Done!"
+    ];
+
+    function triggerFakeLoading(task, callback) {
+      loaderOverlay.style.opacity = '1';
+      loaderOverlay.style.visibility = 'visible';
+      loaderFill.style.width = '0%';
+      let progress = 0;
+      let msgIdx = 0;
+
+      const interval = setInterval(() => {
+        progress += Math.floor(Math.random() * 25) + 15;
+        if (progress > 100) progress = 100;
+        loaderFill.style.width = progress + '%';
+        if (msgIdx < fakeMessages.length) {
+          loaderText.innerText = `[${task}] ${fakeMessages[msgIdx++]}`;
+        }
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            loaderOverlay.style.opacity = '0';
+            setTimeout(() => loaderOverlay.style.visibility = 'hidden', 500);
+            if (callback) callback();
+          }, 200);
+        }
+      }, 50);
+    }
+
+    window.addEventListener('load', () => triggerFakeLoading('SYSTEM BOOT'));
+
+    // --- ELEMENTS ---
+    const anyFileInput = document.getElementById('anyFileInput');
+    const gustavInput = document.getElementById('gustavInput');
+    const customNameInput = document.getElementById('customNameInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewPlaceholder = document.getElementById('previewPlaceholder');
+    const fileDataInfo = document.getElementById('fileDataInfo');
+    const fileStatus = document.getElementById('fileStatus');
+    const exportBox = document.getElementById('exportBox');
+    const downloadRestoredBtn = document.getElementById('downloadRestoredBtn');
+
+    let loadedPayload = null;
+
+    // --- HELPER: VORSCHAU RENDERN ---
+    function renderPreview(mimeType, dataUrl, fileName) {
+      previewContainer.innerHTML = ''; // Leeren
+
+      if (mimeType.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        previewContainer.appendChild(img);
+      } else if (mimeType.startsWith('audio/')) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = dataUrl;
+        previewContainer.appendChild(audio);
+      } else if (mimeType.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = dataUrl;
+        previewContainer.appendChild(video);
+      } else if (mimeType.startsWith('text/')) {
+        const textDiv = document.createElement('div');
+        textDiv.style.color = 'var(--secondary)';
+        textDiv.style.fontFamily = 'monospace';
+        textDiv.style.fontSize = '0.8rem';
+        textDiv.innerText = `[Textdatei Vorschau]\n${fileName}`;
+        previewContainer.appendChild(textDiv);
+      } else {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'preview-placeholder';
+        fileDiv.innerHTML = `📄<br><strong>${fileName}</strong><br>(${mimeType || 'Unbekannter Typ'})`;
+        previewContainer.appendChild(fileDiv);
+      }
+    }
+
+    // --- DATEI ZU .GUSTAV ENCODEN ---
+    anyFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      triggerFakeLoading('ENCODING', () => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const dataUrl = evt.target.result;
+          
+          // Eigener Name oder Original-Name
+          const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+          const customTitle = customNameInput.value.trim();
+          const finalFileName = customTitle ? `${customTitle}.${ext}` : file.name;
+
+          const payload = {
+            originalName: finalFileName,
+            originalType: file.type || 'application/octet-stream',
+            size: file.size,
+            dataCode: dataUrl
+          };
+
+          // .gustav Container erstellen
+          const container = {
+            format: "GUSTAV",
+            version: "7.0",
+            mediaType: "file",
+            payload: payload
+          };
+
+          renderPreview(payload.originalType, dataUrl, finalFileName);
+
+          // Download triggern
+          const blob = new Blob([JSON.stringify(container)], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          const exportGustavName = customTitle ? `${customTitle}.gustav` : `${file.name}.gustav`;
+          a.download = exportGustavName;
+          a.click();
+
+          fileStatus.innerText = `Erfolgreich als '${exportGustavName}' vergustavt!`;
+          fileStatus.style.color = 'var(--secondary)';
+          fileDataInfo.value = `[GUSTAV CONTAINER CODE]\nName: ${finalFileName}\nType: ${payload.originalType}\nBytes: ${payload.size}`;
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    // --- .GUSTAV DATEI ÖFFNEN & RENDERN ---
+    gustavInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      triggerFakeLoading('DECODING GUSTAV', () => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const container = JSON.parse(evt.target.result);
+            if (container.format !== "GUSTAV") {
+              alert("Keine gültige .gustav Datei!");
+              return;
+            }
+
+            loadedPayload = container.payload || container;
+
+            // Name im Eingabefeld anzeigen
+            const baseName = loadedPayload.originalName.substring(0, loadedPayload.originalName.lastIndexOf('.')) || loadedPayload.originalName;
+            customNameInput.value = baseName;
+
+            renderPreview(loadedPayload.originalType, loadedPayload.dataCode, loadedPayload.originalName);
+
+            exportBox.style.display = 'flex';
+            fileStatus.innerText = `Container geladen: ${loadedPayload.originalName}`;
+            fileStatus.style.color = '#00ff66';
+            fileDataInfo.value = `[LOADED GUSTAV STREAM]\nOriginal: ${loadedPayload.originalName}\nType: ${loadedPayload.originalType}\nData Stream Base64: ${loadedPayload.dataCode.substring(0, 70)}...`;
+
+          } catch (err) {
+            alert("Fehler beim Lesen der .gustav Datei!");
+          }
+        };
+        reader.readAsText(file);
+      });
+    });
+
+    // --- ENTPACKEN DER GELADENEN DATEI ---
+    downloadRestoredBtn.addEventListener('click', () => {
+      if (!loadedPayload) return;
+
+      triggerFakeLoading('UNPACKING', () => {
+        const ext = loadedPayload.originalName.includes('.') ? loadedPayload.originalName.split('.').pop() : '';
+        const customTitle = customNameInput.value.trim();
+        const exportName = customTitle ? `${customTitle}.${ext}` : loadedPayload.originalName;
+
+        const a = document.createElement('a');
+        a.href = loadedPayload.dataCode;
+        a.download = exportName;
+        a.click();
+      });
+    });
+  </script>
+</body>
+</html>

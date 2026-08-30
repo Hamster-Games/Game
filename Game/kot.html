@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KotSMP | Official Minecraft Server</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&family=Press+Start+2P&display=swap');
+
+        /* Standard variables (Dark Mode / Orange) */
+        :root {
+            --primary: #ffaa00;
+            --primary-hover: #ffcc66;
+            --bg-dark: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --transition: all 0.3s ease;
+            --gradient-color: rgba(40, 40, 40, 0.5);
+        }
+
+        /* Light Mode variables */
+        [data-theme="light"] {
+            --bg-dark: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #121212;
+            --text-muted: #666666;
+            --gradient-color: rgba(220, 220, 220, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, var(--gradient-color) 0%, var(--bg-dark) 100%);
+            z-index: -2;
+        }
+
+        /* Fixed Header Navbar */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            border-bottom: 3px solid var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Prevent header from becoming invisible/white in Light Mode */
+        header a, header nav a {
+            color: #ffffff !important;
+        }
+        header nav a:hover { color: var(--primary) !important; }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Hamburger Menu Icon */
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 21px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: var(--transition);
+        }
+
+        .hamburger span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: var(--primary);
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .hamburger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        .logo {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.4rem;
+            color: #fff;
+            text-shadow: 2px 2px var(--primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            position: relative;
+            padding: 5px 0;
+            transition: var(--transition);
+        }
+
+        /* Sidebar Menu */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(15, 15, 15, 0.98);
+            border-right: 2px solid var(--primary);
+            z-index: 1050;
+            transition: all 0.4s cubic-bezier(0.77,0.2,0.05,1.0);
+            padding: 100px 20px 40px 20px;
+            box-shadow: 5px 0 30px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar.open { left: 0; }
+
+        .sidebar-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .sidebar-menu a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.05rem;
+            transition: var(--transition);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .sidebar-menu a:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+            padding-left: 20px;
+        }
+
+        /* Settings section in the sidebar */
+        .sidebar-settings {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .settings-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .theme-switch-btn {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            margin-bottom: 15px;
+        }
+        .theme-switch-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .color-picker-container {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .color-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: #ffffff; transform: scale(1.1); }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1040;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+
+        .overlay.show { display: block; }
+
+        /* Hero */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/Screenshot%202026-07-19%20114259.png') center/cover no-repeat;
+        }
+
+        .hero h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0px var(--primary);
+            color: #ffffff;
+        }
+        .hero p { color: #ffffff; }
+
+        .ip-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed var(--primary);
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.2rem;
+            color: var(--primary);
+            cursor: pointer;
+            transition: var(--transition);
+            border-radius: 8px;
+        }
+
+        .ip-box:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 25px var(--primary);
+        }
+
+        /* Global Section Styles */
+        section {
+            padding: 120px 50px 80px 50px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2rem;
+            margin-bottom: 50px;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 40px 30px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover .stat-icon { transform: rotate(360deg); }
+        .stat-number { font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
+        .stat-label { color: var(--text-muted); text-transform: uppercase; font-size: 0.9rem; letter-spacing: 2px; }
+
+        .leaderboard-list { list-style: none; margin-top: 15px; text-align: left; font-size: 0.9rem; }
+        .leaderboard-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .leaderboard-item span.name { color: var(--text-main); font-weight: 600; }
+        .leaderboard-item span.money { color: var(--primary); font-weight: bold; }
+
+        /* General Box Content Styling */
+        .content-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .flex-item {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+        .flex-item:last-child { margin-bottom: 0; }
+        .flex-item:nth-child(even) { flex-direction: row-reverse; }
+
+        .display-img {
+            width: 40%;
+            max-width: 400px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: var(--transition);
+        }
+        .display-img:hover { border-color: var(--primary); transform: scale(1.02); }
+
+        .text-block { width: 60%; }
+        .text-block h3 { font-size: 1.6rem; margin-bottom: 15px; color: var(--primary); }
+        .text-block p { color: var(--text-muted); line-height: 1.6; }
+
+        /* Grid for Shop Items */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .shop-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: var(--transition);
+        }
+        .shop-card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        .shop-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; }
+        .shop-card h3 { color: var(--text-main); }
+        
+        .btn-action {
+            display: inline-block;
+            background: var(--primary);
+            color: #000;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-decoration: none;
+            margin-top: 15px;
+            transition: var(--transition);
+        }
+        .btn-action:hover { background: var(--primary-hover); box-shadow: 0 0 15px var(--primary); }
+
+        /* Rules Layout */
+        .rule-box {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-top: 1px solid rgba(255,255,255,0.02);
+        }
+        .rule-box h4 { color: var(--text-main); font-size: 1.1rem; margin-bottom: 5px; }
+
+        footer {
+            background: #0b0b0b;
+            text-align: center;
+            padding: 40px 20px;
+            color: #aaaaaa;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 768px) {
+            nav { display: none; }
+            .flex-item, .flex-item:nth-child(even) { flex-direction: column; text-align: center; }
+            .display-img, .text-block { width: 100%; }
+            .hero h1 { font-size: 2rem; }
+            section { padding: 80px 20px 40px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+    <header>
+        <div class="header-left">
+            <div class="hamburger" id="hamburgerBtn" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <a href="#" class="logo">KotSMP</a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#stats">Stats</a></li>
+                <li><a href="#rules">Rules</a></li>
+                <li><a href="#shop">Shop</a></li>
+                <li><a href="#discord">Discord</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="sidebar" id="sidebarMenu">
+        <div>
+            <div class="sidebar-title">NAVIGATION</div>
+            <ul class="sidebar-menu">
+                <li><a href="#home" onclick="toggleMenu()">🏠 Home</a></li>
+                <li><a href="#stats" onclick="toggleMenu()">📊 Server Stats</a></li>
+                <li><a href="#features" onclick="toggleMenu()">⚔️ Features</a></li>
+                <li><a href="#rules" onclick="toggleMenu()">📜 Rules</a></li>
+                <li><a href="#shop" onclick="toggleMenu()">🛒 Server Shop</a></li>
+                <li><a href="#discord" onclick="toggleMenu()">💬 Discord Server</a></li>
+                <li><a href="https://www.youtube.com/@paulettoog" target="_blank" onclick="toggleMenu()">▶️ YouTube (PaulettoOG)</a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-settings">
+            <div class="settings-label">⚙️ DESIGN MODE</div>
+            <button class="theme-switch-btn" id="themeBtn" onclick="toggleTheme()">☀️ Light Mode</button>
+            
+            <div class="settings-label">🎨 Color</div>
+            <div class="color-picker-container">
+                <div class="color-dot active" style="background: #ffaa00;" onclick="changeColor('#ffaa00', '#ffcc66', this)"></div>
+                <div class="color-dot" style="background: #ff3333;" onclick="changeColor('#ff3333', '#ff6666', this)"></div>
+                <div class="color-dot" style="background: #3388ff;" onclick="changeColor('#3388ff', '#66aaff', this)"></div>
+                <div class="color-dot" style="background: #22cc55;" onclick="changeColor('#22cc55', '#55ee88', this)"></div>
+                <div class="color-dot" style="background: #b533ff;" onclick="changeColor('#b533ff', '#cc66ff', this)"></div>
+            </div>
+        </div>
+    </div>
+
+    <section id="home" class="hero">
+        <h1>KotSMP</h1>
+        <p>Welcome to the ultimate Minecraft SMP server. Survive, build, and dominate together!</p>
+        <div class="ip-box" onclick="copyIP()">
+            kotsmp.minekeep.gg
+        </div>
+        <p style="font-size: 0.8rem; margin-top: 10px; color: #aaaaaa;">(Click to copy)</p>
+    </section>
+
+    <section id="stats">
+        <h2>Server Stats</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/mcpfp%20-%20PeterKot.png" alt="Icon" class="stat-icon">
+                <div class="stat-number" id="online-players">Loading...</div>
+                <div class="stat-label">Players Online</div>
+            </div>
+            <div class="stat-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/3962020.png" alt="Icon" class="stat-icon">
+                <div class="stat-number" id="server-status">Loading...</div>
+                <div class="stat-label">Server Status</div>
+            </div>
+            <div class="stat-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/images.png" alt="Icon" class="stat-icon">
+                <div class="stat-number">1.21.x</div>
+                <div class="stat-label">Server Version</div>
+            </div>
+            <div class="stat-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/5776691.png" alt="Icon" class="stat-icon">
+                <div class="stat-label" style="margin-bottom: 10px; font-weight: bold; color: var(--text-main);">🏆 Richest Players</div>
+                <ul class="leaderboard-list">
+                    <li class="leaderboard-item"><span class="name">1. PlayerOne</span><span class="money">$500K</span></li>
+                    <li class="leaderboard-item"><span class="name">2. CraftMaster</span><span class="money">$380K</span></li>
+                    <li class="leaderboard-item"><span class="name">3. Miner4Life</span><span class="money">$290K</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="features">
+        <h2>Features & Gameplay</h2>
+        <div class="content-container">
+            <div class="flex-item">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/Screenshot%202026-07-19%20123906.png" alt="Feature" class="display-img">
+                <div class="text-block">
+                    <h3>Survival Multiplayer</h3>
+                    <p>Experience a classic survival multiplayer adventure with a strong economy and protected zones for your massive builds. Enjoy our custom items like the Pauletto armor or the grappling hook.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="rules">
+        <h2>Server Rules</h2>
+        <div class="content-container">
+            <div class="flex-item">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/2357052.png" alt="Rules" class="display-img">
+                <div class="text-block" style="width: 100%;">
+                    <div class="rule-box">
+                        <h4>1. General Conduct (Chat & Interaction) ✉️ 💬 </h4>
+                        <p>👉 - Respectful conduct: No insults, bullying, or provocations in the chat or on Discord.😡<br>👉 - No spam: No spamming messages or excessive use of all-caps.✉️ 
+<br>👉 - No unauthorized external advertising: No promotion of other Minecraft servers, YouTube channels, or Discord links without permission.🛑 
+<br>👉 - Appropriate skins & names: No offensive or insulting skins or player names.🦺 
+                     </p>
+                    </div>
+                    <div class="rule-box">
+                        <h4>2. Gameplay & Fairness🕹️ ⛔ </h4>
+                        <p>👉- Strict ban on cheating: Mods, hacks, or texture packs that provide unfair advantages (e.g., X-Ray, fly hacks, KillAura) are strictly prohibited.✖️
+<br>👉- No griefing: Destroying or altering other players' structures without their permission is prohibited.😱 
+<br>👉- No stealing: Items must not be stolen from other players' chests or furnaces.🤥 
+<br>👉- Bug exploitation is prohibited: Exploiting game errors (bugs) or duplication glitches is forbidden. Errors must be reported to the team.🤓 </p>
+                    </div>
+                    <div class="rule-box">
+                        <h4>3. Building rules & server performance👾 🏠 </h4>
+                        <p>👉- Maintain distance: When building, keep a sufficient distance from your neighbors' plots (e.g., at least 50–100 blocks), unless agreed otherwise.🔛 
+<br>👉- Lag prevention (Redstone & entities): * Continuously running Redstone circuits (clocks) must be capable of being turned off and must not run while you are offline.⏰ </p>
+                    </div>
+                    <div class="rule-box">
+                        <h4>4. PvP (Player vs. Player) & Raiding⚔️ </h4>
+                        <p>👉- For peaceful servers (PvE): PvP is permitted only in designated arenas or by mutual agreement. Player traps (lethal traps) are prohibited.📌 
+<br>👉- For PvP/Factions servers: PvP is permitted everywhere. However, camping at spawn points (spawn-killing) or dropping lava or water onto enemy bases may be restricted.🎮</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="shop">
+        <h2>Server Shop</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">Support the project and unlock cool cosmetic perks!</p>
+        <div class="shop-grid">
+            <div class="shop-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/Screenshot%202026-07-19%20130540.png" alt="Rank 1" class="shop-img">
+                <h3>Pauletto Armor</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin: 10px 0;">You can get the armor by asking Pauletto74 in our Discord server.</p>
+                <div style="font-weight: bold; color: var(--primary); font-size: 1.2rem;">Ask in Discord</div>
+                <a href="https://discord.gg/X9QBe3JEU" class="btn-action">Ask</a>
+            </div>
+            <div class="shop-card">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/Screenshot%202026-07-19%20131522.png" alt="Rank 2" class="shop-img">
+                <h3>Exotic Shop</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin: 10px 0;">You can find exclusive items in our exotic shop!</p>
+                <div style="font-weight: bold; color: var(--primary); font-size: 1.2rem;">32 Diamonds per item</div>
+                <a href="https://discord.gg/X9QBe3JEU" class="btn-action">Ask</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="discord">
+        <h2>Join our Discord</h2>
+        <div class="content-container">
+            <div class="flex-item">
+                <img src="https://raw.githubusercontent.com/Paupebru/KotSMP/refs/heads/main/Bilder/image.png" alt="Discord" class="display-img">
+                <div class="text-block">
+                    <h3>Stay always up-to-date!</h3>
+                    <p>Become part of our growing community. Chat with other players, join polls, and get support directly from the server team.</p>
+                    <a href="https://discord.gg/X9QBe3JEU" target="_blank" class="btn-action">Join Discord</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 KotSMP. Hosted via minekeep.gg.</p>
+    </footer>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('hamburgerBtn').classList.toggle('open');
+            document.getElementById('sidebarMenu').classList.toggle('open');
+            document.getElementById('menuOverlay').classList.toggle('show');
+        }
+
+        function copyIP() {
+            navigator.clipboard.writeText("kotsmp.minekeep.gg").then(() => {
+                alert("Server IP copied!");
+            });
+        }
+
+        /* NEW: JavaScript functions for the settings system */
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('themeBtn');
+            
+            if (body.getAttribute('data-theme') === 'light') {
+                body.removeAttribute('data-theme');
+                btn.innerText = "☀️ Light Mode";
+            } else {
+                body.setAttribute('data-theme', 'light');
+                btn.innerText = "🌙 Dark Mode";
+            }
+        }
+
+        function changeColor(primaryColor, hoverColor, clickedDot) {
+            // CSS Variablen anpassen
+            document.documentElement.style.setProperty('--primary', primaryColor);
+            document.documentElement.style.setProperty('--primary-hover', hoverColor);
+            
+            // Aktiven Punkt markieren
+            const dots = document.querySelectorAll('.color-dot');
+            dots.forEach(dot => dot.classList.remove('active'));
+            clickedDot.classList.add('active');
+        }
+
+        /* Live Minecraft-Abfrage mit Sicherheitsnetz */
+        function updateLiveStats() {
+            const playersCard = document.getElementById('online-players');
+            const statusCard = document.getElementById('server-status');
+
+            fetch('https://api.mcsrvstat.us/3/kotsmp.minekeep.gg')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.online === true && data.players && data.players.max > 0) {
+                        playersCard.innerText = data.players.online + " / " + data.players.max;
+                        statusCard.innerText = "ONLINE";
+                        statusCard.style.color = "#00ff00";
+                    } else {
+                        playersCard.innerText = "0 / 0";
+                        statusCard.innerText = "OFFLINE";
+                        statusCard.style.color = "#ff0000";
+                    }
+                })
+                .catch(err => {
+                    playersCard.innerText = "0 / 0";
+                    statusCard.innerText = "OFFLINE";
+                    statusCard.style.color = "#ff0000";
+                });
+        }
+
+        window.onload = updateLiveStats;
+    </script>
+</body>
+</html>

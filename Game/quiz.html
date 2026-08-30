@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz</title>
+    <style>
+        :root {
+            /* Kahoot Standard Buttons */
+            --kahoot-red: #e21b3c;
+            --kahoot-blue: #1368ce;
+            --kahoot-yellow: #d89e00;
+            --kahoot-green: #26890c;
+            
+            /* Dynamische Variablen für das Design */
+            --bg-color: #f2f2f2;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-btn-color: #46178f;
+            --primary-btn-text: #ffffff;
+        }
+
+        body {
+            font-family: 'Montserrat', 'Trebuchet MS', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            background: var(--card-bg);
+            color: var(--text-color);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        h1 {
+            color: var(--primary-btn-color);
+            font-size: 2.5rem;
+            margin-top: 0;
+            font-weight: 800;
+            transition: color 0.3s ease;
+        }
+
+        h2 { font-size: 1.8rem; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+
+        input, select, button {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus { outline: none; border-color: var(--primary-btn-color); }
+
+        button.primary-btn {
+            background-color: var(--primary-btn-color);
+            color: var(--primary-btn-text);
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+            transition: transform 0.1s, background-color 0.3s ease;
+        }
+
+        button.primary-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* Custom Color Grid */
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.03);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .color-item { text-align: left; }
+        .color-item label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px; }
+        .color-item input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
+
+        .theme-box {
+            background: rgba(0,0,0,0.05);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .theme-box label { font-weight: bold; display: block; margin-bottom: 5px; }
+
+        /* Kahoot Buttons */
+        .kahoot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .kahoot-btn {
+            color: white; border: none; border-radius: 6px; padding: 24px 16px;
+            font-size: 20px; font-weight: bold; text-align: left;
+            display: flex; align-items: center; cursor: pointer;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: transform 0.1s;
+        }
+        .kahoot-btn:active { transform: translateY(6px); box-shadow: none; }
+        .kahoot-btn .shape { font-size: 28px; margin-right: 15px; display: inline-block; width: 40px; text-align: center; }
+
+        .btn-red { background-color: var(--kahoot-red); }
+        .btn-blue { background-color: var(--kahoot-blue); }
+        .btn-yellow { background-color: var(--kahoot-yellow); }
+        .btn-green { background-color: var(--kahoot-green); }
+
+        .timer-circle {
+            width: 70px; height: 70px; border-radius: 50%;
+            background: var(--primary-btn-color); color: var(--primary-btn-text);
+            font-size: 24px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            margin: 0 auto 15px auto; border: 4px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .progress-bar { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        .editor-box { background: rgba(0,0,0,0.03); padding: 20px; border-radius: 12px; border: 2px solid rgba(0,0,0,0.05); margin-bottom: 15px; text-align: left; }
+        .editor-box label { font-weight: bold; display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="step-setup">
+        <h1>Quiz Creator</h1>
+        <p>Erstelle dein eigenes Quiz!</p>
+        
+        <div class="theme-box">
+            <label>🎨 Design wählen:</label>
+            <select id="theme-select" onchange="applyTheme()">
+                <option value="light">Kahoot Light🤮</option>
+                <option value="dark">Kahoot Dark</option>
+                <option value="green">GRÜN</option>
+                <option value="yellow">GELB</option>
+                <option value="red">ROT</option>
+                <option value="blue">BLAU</option>
+                <option value="custom">⚙️ Custom Farbe</option>
+            </select>
+            
+            <div id="custom-theme-panel" class="hidden">
+                <div class="color-picker-grid">
+                    <div class="color-item">
+                        <label>Hintergrund:</label>
+                        <input type="color" id="cp-bg" value="#2a085c" oninput="updateCustomVariables()">
+                    </div>
+                    <div class="color-item">
+                        <label>Box-Farbe:</label>
+                        <input type="color" id="cp-card" value="#ffffff" oninput="updateCustomVariables()">
+                    </div>
+                    <div class="color-item">
+                        <label>Textfarbe:</label>
+                        <input type="color" id="cp-text" value="#333333" oninput="updateCustomVariables()">
+                    </div>
+                    <div class="color-item">
+                        <label>Buttons:</label>
+                        <input type="color" id="cp-btn" value="#46178f" oninput="updateCustomVariables()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-box" style="text-align: center;">
+            <label style="margin-bottom: 8px;">Wie viele Fragen?</label>
+            <input type="number" id="quiz-length" min="1" max="100" value="3">
+        </div>
+
+        <button class="primary-btn" onclick="startCreation()">Quiz erstellen</button>
+    </div>
+
+    <div id="step-create" class="hidden">
+        <h2 id="create-title">Frage 1 machen</h2>
+        
+        <div class="editor-box">
+            <label>Antwort-Format:</label>
+            <select id="input-type" onchange="toggleInputs()">
+                <option value="choice">Multiple Choice</option>
+                <option value="text">Texteingabe</option>
+                <option value="boolean">Wahr / Falsch</option>
+                <option value="number">Zahlen-Eingabe</option>
+            </select>
+
+            <label>⏳ Zeitlimit:</label>
+            <input type="number" id="input-time" min="0" value="20" placeholder="0 = Kein Limit">
+
+            <label style="margin-top: 15px;">Fragetext:</label>
+            <input type="text" id="input-question" placeholder="Z. B. Was ist die Hauptstadt von Frankreich?">
+        </div>
+
+        <div id="wrapper-choice" class="editor-box">
+            <p style="margin-top:0; font-weight: bold;">Antworten:</p>
+            <input type="text" id="input-opt1" placeholder="🔺 Rote Option A">
+            <input type="text" id="input-opt2" placeholder="🔷 Blaue Option B">
+            <input type="text" id="input-opt3" placeholder="🟡 Gelbe Option C">
+            <input type="text" id="input-opt4" placeholder="🟩 Grüne Option D">
+            
+            <label>Richtige Farbe:</label>
+            <select id="input-correct-choice">
+                <option value="0">🔺 Rot (Option A)</option>
+                <option value="1">🔷 Blau (Option B) </option>
+                <option value="2">🟡 Gelb (Option C)</option>
+                <option value="3">🟩 Grün (Option D)</option>
+            </select>
+        </div>
+
+        <div id="wrapper-text" class="editor-box hidden">
+            <label>Richtiges Lösungswort:</label>
+            <input type="text" id="input-correct-text" placeholder="Lösung eingeben...">
+        </div>
+
+        <div id="wrapper-boolean" class="editor-box hidden">
+            <label>Richtige Aussage:</label>
+            <select id="input-correct-boolean">
+                <option value="Wahr">🔺 Wahr</option>
+                <option value="Falsch">🔷 Falsch</option>
+            </select>
+        </div>
+
+        <div id="wrapper-number" class="editor-box hidden">
+            <label>Richtige Zahl:</label>
+            <input type="number" id="input-correct-number" placeholder="Zahl eingeben...">
+        </div>
+
+        <button class="primary-btn" onclick="saveQuestion()" id="next-creator-btn">Nächste Frage speichern</button>
+    </div>
+
+    <div id="step-play" class="hidden">
+        <div class="progress-bar" id="play-progress">FRAGE 1 VON X</div>
+        <div class="timer-circle" id="timer-box">20</div>
+        <h2 id="play-question">Fragetext lädt...</h2>
+        
+        <div id="play-area"></div>
+    </div>
+
+    <div id="step-results" class="hidden">
+        <h1>Quiz beendet! 🥳</h1>
+        <p id="result-text" style="font-size: 22px; font-weight: bold; margin: 20px 0;"></p>
+        <button class="primary-btn" onclick="restartGame()">Neues Quiz starten</button>
+    </div>
+</div>
+
+<script>
+    let totalQuestions = 0;
+    let currentCreateIdx = 0;
+    let currentPlayIdx = 0;
+    let score = 0;
+    let quizData = [];
+    
+    let countdownInterval = null;
+    let timeLeft = 0;
+
+    // Farb- und Theme-Steuerung
+    function applyTheme() {
+        const theme = document.getElementById('theme-select').value;
+        const customPanel = document.getElementById('custom-theme-panel');
+        const root = document.documentElement;
+
+        customPanel.classList.add('hidden');
+
+        if (theme === 'light') {
+            setColors('#f2f2f2', '#ffffff', '#333333', '#46178f', '#ffffff');
+        } else if (theme === 'dark') {
+            setColors('#1e1136', '#2d1b4e', '#ffffff', '#8644f5', '#ffffff');
+        } else if (theme === 'green') {
+            setColors('#114205', '#195c09', '#ffffff', '#26890c', '#ffffff');
+        } else if (theme === 'yellow') {
+            setColors('#fff0b3', '#ffd11a', '#262200', '#b38000', '#ffffff');
+        } else if (theme === 'red') {
+            setColors('#4a030d', '#800c1d', '#ffffff', '#e21b3c', '#ffffff');
+        } else if (theme === 'blue') {
+            setColors('#082b54', '#10498c', '#ffffff', '#1d7bf2', '#ffffff');
+        } else if (theme === 'custom') {
+            customPanel.classList.remove('hidden');
+            updateCustomVariables();
+        }
+    }
+
+    function setColors(bg, card, text, btn, btnText) {
+        const r = document.documentElement;
+        r.style.setProperty('--bg-color', bg);
+        r.style.setProperty('--card-bg', card);
+        r.style.setProperty('--text-color', text);
+        r.style.setProperty('--primary-btn-color', btn);
+        r.style.setProperty('--primary-btn-text', btnText);
+    }
+
+    function updateCustomVariables() {
+        const bg = document.getElementById('cp-bg').value;
+        const card = document.getElementById('cp-card').value;
+        const text = document.getElementById('cp-text').value;
+        const btn = document.getElementById('cp-btn').value;
+        
+        // Smarte Textfarbe für den Button wählen (schwarz oder weiß je nach Button-Helligkeit)
+        const btnText = getContrastColor(btn);
+        
+        setColors(bg, card, text, btn, btnText);
+    }
+
+    // Hilfsfunktion: Berechnet ob weißer oder schwarzer Text lesbarer auf einem Button ist
+    function getContrastColor(hexcolor){
+        let r = parseInt(hexcolor.substr(1,2),16);
+        let g = parseInt(hexcolor.substr(3,2),16);
+        let b = parseInt(hexcolor.substr(5,2),16);
+        let yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+
+    function toggleInputs() {
+        const type = document.getElementById('input-type').value;
+        document.getElementById('wrapper-choice').classList.add('hidden');
+        document.getElementById('wrapper-text').classList.add('hidden');
+        document.getElementById('wrapper-boolean').classList.add('hidden');
+        document.getElementById('wrapper-number').classList.add('hidden');
+
+        if (type === 'choice') document.getElementById('wrapper-choice').classList.remove('hidden');
+        if (type === 'text') document.getElementById('wrapper-text').classList.remove('hidden');
+        if (type === 'boolean') document.getElementById('wrapper-boolean').classList.remove('hidden');
+        if (type === 'number') document.getElementById('wrapper-number').classList.remove('hidden');
+    }
+
+    function startCreation() {
+        totalQuestions = parseInt(document.getElementById('quiz-length').value);
+        if (isNaN(totalQuestions) || totalQuestions < 1 || totalQuestions > 100) {
+            alert("Wähle bitte eine Zahl zwischen 1 und 100.");
+            return;
+        }
+        quizData = [];
+        currentCreateIdx = 0;
+        document.getElementById('step-setup').classList.add('hidden');
+        document.getElementById('step-create').classList.remove('hidden');
+        showCreationForm();
+    }
+
+    function showCreationForm() {
+        document.getElementById('create-title').innerText = `Frage ${currentCreateIdx + 1} von ${totalQuestions} erstellen`;
+        document.getElementById('input-question').value = "";
+        document.getElementById('input-opt1').value = "";
+        document.getElementById('input-opt2').value = "";
+        document.getElementById('input-opt3').value = "";
+        document.getElementById('input-opt4').value = "";
+        document.getElementById('input-correct-text').value = "";
+        document.getElementById('input-correct-number').value = "";
+        document.getElementById('input-time').value = "20";
+        document.getElementById('input-type').selectedIndex = 0;
+        toggleInputs();
+
+        if (currentCreateIdx === totalQuestions - 1) {
+            document.getElementById('next-creator-btn').innerText = "🎮 Quiz fertigstellen & Starten";
+        } else {
+            document.getElementById('next-creator-btn').innerText = "Nächste Frage speichern";
+        }
+    }
+
+    function saveQuestion() {
+        const qText = document.getElementById('input-question').value.trim();
+        const type = document.getElementById('input-type').value;
+        const qTime = parseInt(document.getElementById('input-time').value) || 0;
+
+        if (!qText) { alert("Bitte gib eine Frage ein!"); return; }
+
+        let questionObj = { type: type, question: qText, timeLimit: qTime };
+
+        if (type === 'choice') {
+            const o1 = document.getElementById('input-opt1').value.trim();
+            const o2 = document.getElementById('input-opt2').value.trim();
+            const o3 = document.getElementById('input-opt3').value.trim();
+            const o4 = document.getElementById('input-opt4').value.trim();
+            if (!o1 || !o2 || !o3 || !o4) { alert("Bitte fülle alle 4 Kahoot-Optionen aus."); return; }
+            questionObj.options = [o1, o2, o3, o4];
+            questionObj.correct = parseInt(document.getElementById('input-correct-choice').value);
+        } else if (type === 'text') {
+            const txt = document.getElementById('input-correct-text').value.trim();
+            if (!txt) { alert("Bitte gib das Lösungswort ein."); return; }
+            questionObj.correct = txt;
+        } else if (type === 'boolean') {
+            questionObj.correct = document.getElementById('input-correct-boolean').value;
+        } else if (type === 'number') {
+            const num = document.getElementById('input-correct-number').value;
+            if (num === "") { alert("Bitte gib eine gültige Zahl ein."); return; }
+            questionObj.correct = Number(num);
+        }
+
+        quizData.push(questionObj);
+        currentCreateIdx++;
+
+        if (currentCreateIdx < totalQuestions) {
+            showCreationForm();
+        } else {
+            document.getElementById('step-create').classList.add('hidden');
+            document.getElementById('step-play').classList.remove('hidden');
+            currentPlayIdx = 0;
+            score = 0;
+            showQuestion();
+        }
+    }
+
+    function showQuestion() {
+        const currentQ = quizData[currentPlayIdx];
+        document.getElementById('play-progress').innerText = `FRAGE ${currentPlayIdx + 1} VON ${totalQuestions}`;
+        document.getElementById('play-question').innerText = currentQ.question;
+        
+        const playArea = document.getElementById('play-area');
+        playArea.innerHTML = "";
+
+        startTimer(currentQ.timeLimit);
+
+        if (currentQ.type === 'choice') {
+            playArea.innerHTML = `
+                <div class="kahoot-grid">
+                    <button class="kahoot-btn btn-red" onclick="evalAnswer(0)"><span class="shape">🔺</span> ${currentQ.options[0]}</button>
+                    <button class="kahoot-btn btn-blue" onclick="evalAnswer(1)"><span class="shape">🔷</span> ${currentQ.options[1]}</button>
+                    <button class="kahoot-btn btn-yellow" onclick="evalAnswer(2)"><span class="shape">🟡</span> ${currentQ.options[2]}</button>
+                    <button class="kahoot-btn btn-green" onclick="evalAnswer(3)"><span class="shape">🟩</span> ${currentQ.options[3]}</button>
+                </div>`;
+        } else if (currentQ.type === 'text') {
+            playArea.innerHTML = `
+                <input type="text" id="user-text-answer" placeholder="Deine Antwort eintippen..." style="margin-top:20px; text-align:center;">
+                <button class="primary-btn" onclick="evalTextAnswer()">Antwort abschicken</button>`;
+            document.getElementById('user-text-answer').focus();
+        } else if (currentQ.type === 'boolean') {
+            playArea.innerHTML = `
+                <div class="kahoot-grid">
+                    <button class="kahoot-btn btn-red" onclick="evalAnswer('Wahr')"><span class="shape">🔺</span> Wahr</button>
+                    <button class="kahoot-btn btn-blue" onclick="evalAnswer('Falsch')"><span class="shape">🔷</span> Falsch</button>
+                </div>`;
+        } else if (currentQ.type === 'number') {
+            playArea.innerHTML = `
+                <input type="number" id="user-number-answer" placeholder="Ziffer eingeben..." style="margin-top:20px; text-align:center;">
+                <button class="primary-btn" onclick="evalNumberAnswer()">Zahl einreichen</button>`;
+            document.getElementById('user-number-answer').focus();
+        }
+    }
+
+    function startTimer(limit) {
+        clearInterval(countdownInterval);
+        const timerBox = document.getElementById('timer-box');
+        
+        if (limit === 0) {
+            timerBox.innerText = "∞";
+            return;
+        }
+        
+        timeLeft = limit;
+        timerBox.innerText = timeLeft;
+
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            timerBox.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                alert("⏰ Zeit abgelaufen!");
+                nextQuestion();
+            }
+        }, 1000);
+    }
+
+    function evalAnswer(playerAnswer) {
+        clearInterval(countdownInterval);
+        const currentQ = quizData[currentPlayIdx];
+        if (playerAnswer === currentQ.correct) {
+            score++;
+            alert("Richtig! 🎉");
+        } else {
+            let info = currentQ.type === 'choice' ? currentQ.options[currentQ.correct] : currentQ.correct;
+            alert(`Falsch! Richtige Antwort: ${info}`);
+        }
+        nextQuestion();
+    }
+
+    function evalTextAnswer() {
+        clearInterval(countdownInterval);
+        const currentQ = quizData[currentPlayIdx];
+        const ans = document.getElementById('user-text-answer').value.trim();
+        if (ans.toLowerCase() === currentQ.correct.toLowerCase()) {
+            score++;
+            alert("Richtig! 🎉");
+        } else {
+            alert(`Falsch! Richtig war: ${currentQ.correct}`);
+        }
+        nextQuestion();
+    }
+
+    function evalNumberAnswer() {
+        clearInterval(countdownInterval);
+        const currentQ = quizData[currentPlayIdx];
+        const ans = document.getElementById('user-number-answer').value;
+        if (ans !== "" && Number(ans) === currentQ.correct) {
+            score++;
+            alert("Richtig! 🎉");
+        } else {
+            alert(`Falsch! Die richtige Zahl war: ${currentQ.correct}`);
+        }
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        currentPlayIdx++;
+        if (currentPlayIdx < totalQuestions) {
+            showQuestion();
+        } else {
+            clearInterval(countdownInterval);
+            document.getElementById('step-play').classList.add('hidden');
+            document.getElementById('step-results').classList.remove('hidden');
+            document.getElementById('result-text').innerText = `Du hast ${score} von ${totalQuestions} Punkten geholt!`;
+        }
+    }
+
+    function restartGame() {
+        document.getElementById('step-results').classList.add('hidden');
+        document.getElementById('step-setup').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
