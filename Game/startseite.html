@@ -845,6 +845,92 @@
             text-align: center;
             margin: 10px 0;
         }
+
+        .tool-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .tool-heading h3 {
+            font-size: 1.1rem;
+            letter-spacing: -0.2px;
+        }
+
+        .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .tool-grid .full-width { grid-column: 1 / -1; }
+        .tool-note { color: var(--text-sub); font-size: 0.8rem; line-height: 1.4; }
+        .file-btn { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+        .file-btn input { display: none; }
+        .stpack-preview { min-height: 52px; border: 1px solid var(--card-border); border-radius: 14px; padding: 12px; background: var(--input-bg); color: var(--text-sub); }
+
+        .shortcut-folder { width: 100%; margin-bottom: 14px; }
+        .shortcut-folder-title { color: var(--text-sub); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .shortcut-folder-links { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+        .bookmark-launcher {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            color: var(--text-main);
+            background: var(--input-bg);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .bookmark-launcher:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-color);
+            transform: translateY(-3px);
+        }
+
+        .bookmark-browser {
+            display: none;
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            background: var(--input-bg);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .bookmark-browser.open { display: block; }
+        .bookmark-browser-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+        .bookmark-browser-title { font-size: 0.9rem; font-weight: 700; }
+        .bookmark-back { display: none; padding: 6px 10px; }
+        .bookmark-back.visible { display: inline-block; }
+        .bookmark-folder-grid, .bookmark-file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .bookmark-folder-card, .bookmark-file-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 76px;
+            padding: 12px;
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            color: var(--text-main);
+            background: var(--card-bg);
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+        .bookmark-folder-card:hover, .bookmark-file-card:hover { background: var(--hover-bg); border-color: var(--accent-color); transform: translateY(-3px); }
+        .bookmark-folder-icon { font-size: 1.5rem; margin-bottom: 5px; }
+        .bookmark-folder-name, .bookmark-file-card span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bookmark-folder-count { color: var(--text-sub); font-size: 0.72rem; margin-top: 4px; }
+
+        @media (max-width: 640px) {
+            .tool-grid { grid-template-columns: 1fr; }
+            .tool-grid .full-width { grid-column: auto; }
+            .top-bar { top: 12px; right: 12px; }
+            .page-content { padding-top: 130px; }
+        }
     </style>
 </head>
 <body data-theme="dark">
@@ -924,6 +1010,7 @@
                     <button class="nav-btn" data-tab="tab-display">Anzeige & Text</button>
                     <button class="nav-btn" data-tab="tab-behavior">Verhalten</button>
                     <button class="nav-btn" data-tab="tab-links">Links verwalten</button>
+                    <button class="nav-btn" data-tab="tab-textures">Texture Packs</button>
                 </nav>
 
                 <div class="settings-content">
@@ -1004,7 +1091,33 @@
                             <button type="submit" class="add-btn">+ Link hinzufügen</button>
                         </form>
 
+                        <div class="add-link-form">
+                            <h4>Browser-Lesezeichen importieren</h4>
+                            <small class="tool-note">Exportiere deine Lesezeichen als HTML aus Chrome, Firefox, Edge oder Safari. Die Links werden danach automatisch nach Domain sortiert.</small>
+                            <label class="add-btn file-btn">HTML-Datei auswählen
+                                <input type="file" id="bookmark-import" accept=".html,text/html">
+                            </label>
+                        </div>
+
                         <div id="link-list" class="link-list"></div>
+                    </div>
+
+                    <div id="tab-textures" class="tab-pane">
+                        <div class="tool-heading">
+                            <h3>Eigenes Texture Pack</h3>
+                            <span class="tool-note">.stpack</span>
+                        </div>
+                        <div class="tool-grid">
+                            <input id="pack-name" class="input-field" placeholder="Pack-Name">
+                            <input id="pack-accent" class="input-field" type="color" value="#00f2fe" title="Akzentfarbe">
+                            <input id="pack-background" class="input-field full-width" placeholder="Hintergrundfarbe, z.B. #0d0f18">
+                            <textarea id="pack-instructions" class="input-field full-width" rows="4" placeholder="Anleitung für dein Pack: Farben, Texturen, Einstellungen ..."></textarea>
+                            <button id="save-pack" class="add-btn">Texture Pack speichern</button>
+                            <label class="add-btn file-btn">.stpack importieren
+                                <input type="file" id="pack-import" accept=".stpack,application/json">
+                            </label>
+                            <div id="pack-preview" class="stpack-preview full-width">Noch kein Pack geladen.</div>
+                        </div>
                     </div>
 
                 </div>
@@ -1107,6 +1220,12 @@
             const linkUrlInput = document.getElementById("link-url");
             const linkListContainer = document.getElementById("link-list");
             const mainShortcutsContainer = document.getElementById("main-shortcuts-container");
+            const bookmarkImport = document.getElementById("bookmark-import");
+            const packName = document.getElementById("pack-name");
+            const packAccent = document.getElementById("pack-accent");
+            const packBackground = document.getElementById("pack-background");
+            const packInstructions = document.getElementById("pack-instructions");
+            const packPreview = document.getElementById("pack-preview");
 
             let links = [
                 { id: "1", name: "YouTube", url: "https://www.youtube.com" },
@@ -1114,7 +1233,6 @@
                 { id: "3", name: "GitHub", url: "https://github.com" },
                 { id: "4", name: "Reddit", url: "https://www.reddit.com" }
             ];
-
             navBtns.forEach(btn => {
                 btn.addEventListener("click", () => {
                     navBtns.forEach(b => b.classList.remove("active"));
@@ -1132,23 +1250,109 @@
 
                 if (links.length === 0) {
                     linkListContainer.innerHTML = `<div class="empty-msg">Keine Links vorhanden.</div>`;
-                    return;
                 }
 
-                links.forEach(link => {
-                    const shortcut = document.createElement("a");
-                    shortcut.href = link.url;
-                    shortcut.className = "shortcut-card";
-                    shortcut.innerText = link.name;
-                    mainShortcutsContainer.appendChild(shortcut);
+                const folders = links.reduce((groups, link) => {
+                    let folder = "Andere";
+                    try {
+                        folder = new URL(link.url).hostname.replace(/^www\./, "") || folder;
+                    } catch {
+                        // Links ohne gültige URL landen im Ordner "Andere".
+                    }
+                    (groups[folder] ||= []).push(link);
+                    return groups;
+                }, {});
 
-                    const item = document.createElement("div");
-                    item.className = "setting-link-item";
-                    item.innerHTML = `
-                        <a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.name}</a>
-                        <button class="delete-btn" data-id="${link.id}" title="Link entfernen">🗑️</button>
-                    `;
-                    linkListContainer.appendChild(item);
+                const sortedFolders = Object.entries(folders).sort(([first], [second]) => first.localeCompare(second));
+                const launcher = document.createElement("button");
+                launcher.className = "bookmark-launcher";
+                launcher.type = "button";
+                launcher.textContent = `🔖 Lesezeichen${links.length ? ` · ${sortedFolders.length} Ordner` : ""}`;
+                mainShortcutsContainer.appendChild(launcher);
+
+                const browser = document.createElement("div");
+                browser.className = "bookmark-browser";
+                const toolbar = document.createElement("div");
+                toolbar.className = "bookmark-browser-toolbar";
+                const title = document.createElement("span");
+                title.className = "bookmark-browser-title";
+                const back = document.createElement("button");
+                back.className = "icon-btn bookmark-back";
+                back.type = "button";
+                back.textContent = "← Ordner";
+                toolbar.append(title, back);
+                const folderGrid = document.createElement("div");
+                folderGrid.className = "bookmark-folder-grid";
+                const fileGrid = document.createElement("div");
+                fileGrid.className = "bookmark-file-grid";
+                browser.append(toolbar, folderGrid, fileGrid);
+                mainShortcutsContainer.appendChild(browser);
+
+                const showFolders = () => {
+                    title.textContent = "Alle Lesezeichen-Ordner";
+                    back.classList.remove("visible");
+                    folderGrid.style.display = "grid";
+                    fileGrid.style.display = "none";
+                    folderGrid.innerHTML = "";
+                    if (sortedFolders.length === 0) {
+                        folderGrid.innerHTML = `<div class="empty-msg">Noch keine Lesezeichen vorhanden.</div>`;
+                        return;
+                    }
+                    sortedFolders.forEach(([folder, folderLinks]) => {
+                        const folderButton = document.createElement("button");
+                        folderButton.className = "bookmark-folder-card";
+                        folderButton.type = "button";
+                        folderButton.innerHTML = `<span class="bookmark-folder-icon">📁</span>`;
+                        const folderName = document.createElement("span");
+                        folderName.className = "bookmark-folder-name";
+                        folderName.textContent = folder;
+                        const count = document.createElement("span");
+                        count.className = "bookmark-folder-count";
+                        count.textContent = `${folderLinks.length} Link${folderLinks.length === 1 ? "" : "s"}`;
+                        folderButton.append(folderName, count);
+                        folderButton.addEventListener("click", () => showFiles(folder, folderLinks));
+                        folderGrid.appendChild(folderButton);
+                    });
+                };
+
+                const showFiles = (folder, folderLinks) => {
+                    title.textContent = `📁 ${folder}`;
+                    back.classList.add("visible");
+                    folderGrid.style.display = "none";
+                    fileGrid.style.display = "grid";
+                    fileGrid.innerHTML = "";
+                    folderLinks.forEach(link => {
+                        const file = document.createElement("a");
+                        file.className = "bookmark-file-card";
+                        file.href = link.url;
+                        file.target = "_blank";
+                        file.rel = "noopener noreferrer";
+                        file.innerHTML = `<span>🔗</span>`;
+                        const name = document.createElement("span");
+                        name.textContent = link.name;
+                        file.appendChild(name);
+                        fileGrid.appendChild(file);
+                    });
+                };
+
+                launcher.addEventListener("click", () => {
+                    browser.classList.add("open");
+                    showFolders();
+                });
+                back.addEventListener("click", showFolders);
+                showFolders();
+
+                sortedFolders.forEach(([folder, folderLinks]) => {
+                    folderLinks.forEach(link => {
+                        const item = document.createElement("div");
+                        item.className = "setting-link-item";
+                        item.innerHTML = `
+                            <a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.name}</a>
+                            <span class="tool-note">${folder}</span>
+                            <button class="delete-btn" data-id="${link.id}" title="Link entfernen">🗑️</button>
+                        `;
+                        linkListContainer.appendChild(item);
+                    });
                 });
 
                 document.querySelectorAll(".delete-btn").forEach(btn => {
@@ -1180,6 +1384,75 @@
                     linkNameInput.value = "";
                     linkUrlInput.value = "";
                 }
+            });
+
+            bookmarkImport.addEventListener("change", async event => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const parsed = new DOMParser().parseFromString(await file.text(), "text/html");
+                const knownUrls = new Set(links.map(link => link.url));
+                const importedLinks = Array.from(parsed.querySelectorAll("a[href]"))
+                    .map(anchor => {
+                        try {
+                            const url = new URL(anchor.getAttribute("href"), window.location.href).href;
+                            return {
+                                id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                                name: anchor.textContent.trim() || url,
+                                url
+                            };
+                        } catch {
+                            return null;
+                        }
+                    })
+                    .filter(link => link && /^https?:$/.test(new URL(link.url).protocol))
+                    .filter(link => !knownUrls.has(link.url));
+
+                links.push(...importedLinks);
+                localStorage.setItem("settings_links", JSON.stringify(links));
+                renderLinks();
+                event.target.value = "";
+            });
+
+            function renderPackPreview(pack) {
+                packPreview.textContent = pack
+                    ? `${pack.name || "Unbenannt"} · ${pack.background || "kein Hintergrund"} · Anleitung vorhanden`
+                    : "Noch kein Pack geladen.";
+            }
+
+            document.getElementById("save-pack").addEventListener("click", () => {
+                const pack = {
+                    format: "stpack",
+                    version: 1,
+                    name: packName.value.trim() || "Mein Texture Pack",
+                    accent: packAccent.value,
+                    background: packBackground.value.trim() || "#0d0f18",
+                    instructions: packInstructions.value.trim(),
+                    createdAt: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+                const download = document.createElement("a");
+                download.href = URL.createObjectURL(blob);
+                download.download = `${pack.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "texture-pack"}.stpack`;
+                download.click();
+                URL.revokeObjectURL(download.href);
+                renderPackPreview(pack);
+            });
+
+            document.getElementById("pack-import").addEventListener("change", async event => {
+                const file = event.target.files[0];
+                if (!file) return;
+                try {
+                    const pack = JSON.parse(await file.text());
+                    packName.value = pack.name || "";
+                    packAccent.value = pack.accent || "#00f2fe";
+                    packBackground.value = pack.background || "";
+                    packInstructions.value = pack.instructions || "";
+                    renderPackPreview(pack);
+                } catch {
+                    packPreview.textContent = "Dieses .stpack konnte nicht gelesen werden.";
+                }
+                event.target.value = "";
             });
 
             // To-Do Logic
