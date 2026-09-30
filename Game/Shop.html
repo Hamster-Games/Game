@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petershop</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        mc: {
+                            emerald: '#55FF55',
+                            emeraldDark: '#10B981',
+                            diamond: '#55FFFF',
+                            diamondDark: '#06B6D4',
+                            gold: '#FFAA00',
+                            dark: '#0d0e12',
+                            card: '#161822',
+                            cardLight: '#1f2230',
+                            border: '#2a2e3f',
+                            mcDark: '#0f0f0f'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        pixel: ['"Press Start 2P"', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0e12;
+            color: #f3f4f6;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* Minecraft Chat Box Simulation */
+        .mc-chat-bg {
+            background-color: rgba(0, 0, 0, 0.88);
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.9);
+            border: 2px solid #3c3c3c;
+        }
+
+        .mc-text-green { color: #55FF55; text-shadow: 1px 1px 0px #113311; }
+        .mc-text-aqua { color: #55FFFF; text-shadow: 1px 1px 0px #113333; }
+        .mc-text-gold { color: #FFAA00; text-shadow: 1px 1px 0px #332200; }
+        .mc-text-white { color: #FFFFFF; text-shadow: 1px 1px 0px #333333; }
+        .mc-text-gray { color: #AAAAAA; text-shadow: 1px 1px 0px #222222; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #161822;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2e3f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10B981;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 md:p-8">
+
+    <main class="max-w-2xl mx-auto w-full my-auto space-y-6">
+        
+        <!-- Header Section -->
+        <div class="text-center space-y-3">
+            <div class="inline-flex items-center space-x-2 bg-mc-card border border-mc-border px-3.5 py-1.5 rounded-full text-xs text-mc-emerald font-semibold shadow-lg">
+                <i class="fa-solid fa-cube text-xs animate-pulse"></i>
+                <span class="tracking-wide">Petershop Ingame Trade Store</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+                <span>Command Generator</span>
+            </h1>
+            <p class="text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
+                Erstelle deinen Ingame Trade-Befehl für <span class="text-mc-emerald font-mono font-bold">PeterKot</span>, <span class="text-mc-diamond font-mono font-bold">Eduard_007</span> & <span class="text-mc-gold font-mono font-bold">Pauletto74</span>.
+            </p>
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="bg-mc-card border border-mc-border rounded-2xl p-5 sm:p-7 space-y-6 shadow-2xl relative overflow-hidden">
+            
+            <!-- Mode Switcher Tabs -->
+            <div class="grid grid-cols-2 gap-2 p-1.5 bg-black/40 border border-mc-border rounded-xl">
+                <button type="button" onclick="setMode('trade')" id="tab-trade" class="py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 bg-mc-cardLight text-mc-emerald border border-mc-emerald/30 shadow-md">
+                    <i class="fa-solid fa-right-left"></i>
+                    <span>Item Tauschen</span>
+                </button>
+                <button type="button" onclick="setMode('buy')" id="tab-buy" class="py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-white hover:bg-white/5">
+                    <i class="fa-solid fa-basket-shopping"></i>
+                    <span>Item Kaufen</span>
+                </button>
+            </div>
+
+            <!-- Seller Selection (PeterKot, Eduard_007, Pauletto74, or All) -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Empfänger wählen
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="seller-buttons-container">
+                    <!-- Dynamic Seller Buttons -->
+                </div>
+            </div>
+
+            <!-- Player Name Input -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                    Dein Spielername
+                </label>
+                <div class="relative">
+                    <input type="text" id="my-name" value="Spieler" oninput="generateCommand()" placeholder="Dein Ingame Name" class="w-full bg-black/50 border border-mc-border rounded-xl px-3.5 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-mc-emerald transition-all pl-9">
+                    <i class="fa-solid fa-user absolute left-3.5 top-3 text-xs text-gray-500"></i>
+                </div>
+            </div>
+
+            <!-- Dynamic Items Inputs Section -->
+            <div id="inputs-container" class="space-y-4">
+                <!-- Dynamic Content injected via JS -->
+            </div>
+
+            <!-- Quick Item Pickers -->
+            <div class="space-y-2 pt-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        <i class="fa-solid fa-bolt text-mc-gold mr-1"></i> Schnell-Auswahl
+                    </span>
+                    <span class="text-[10px] text-gray-500">Klicken zum Einfügen</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5" id="quick-pickers">
+                    <!-- Dynamic Quick Buttons -->
+                </div>
+            </div>
+
+            <!-- Command Output -->
+            <div class="space-y-2 pt-3 border-t border-mc-border">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        Fertiger Befehl
+                    </label>
+                    <span class="text-[10px] text-mc-emerald font-mono" id="command-length">0 Zeichen</span>
+                </div>
+
+                <!-- Raw Command String -->
+                <div class="bg-black/70 border border-mc-border rounded-xl p-3.5 font-mono text-xs sm:text-sm text-mc-emerald break-all flex flex-col gap-2 select-all whitespace-pre-wrap" id="command-output">
+                    /msg PeterKot ...
+                </div>
+
+                <!-- Minecraft In-Game Chat Visualizer -->
+                <div class="space-y-1 pt-1">
+                    <span class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Minecraft Chat Vorschau</span>
+                    <div class="mc-chat-bg rounded-lg p-3 font-mono text-xs sm:text-sm leading-relaxed tracking-wide select-none space-y-1.5" id="chat-preview">
+                        <!-- Simulated MC Chat -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Copy Action Button -->
+            <button type="button" onclick="copyCommand()" id="copy-btn" class="w-full bg-mc-emerald hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg cursor-pointer">
+                <i class="fa-solid fa-copy text-sm"></i>
+                <span id="copy-btn-text">Befehl Kopieren</span>
+            </button>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-600 py-4 space-y-1">
+        <p>Petershop &bull; Minecraft Ingame Trade Command Generator</p>
+        <p class="text-[10px] text-gray-700">PeterKot &bull; Eduard_007 &bull; Pauletto74</p>
+    </footer>
+
+    <script>
+        // State
+        let currentMode = 'trade'; // 'trade' or 'buy'
+        let currentTarget = 'PeterKot'; // 'PeterKot', 'Eduard_007', 'Pauletto74', or 'ALL'
+        let activeTargetInput = 'give'; // 'give', 'want', or 'buyItem'
+
+        // Target Sellers list
+        const sellers = [
+            { id: 'PeterKot', name: 'PeterKot', icon: 'fa-user-ninja', color: 'text-mc-emerald' },
+            { id: 'Eduard_007', name: 'Eduard_007', icon: 'fa-user-astronaut', color: 'text-mc-diamond' },
+            { id: 'Pauletto74', name: 'Pauletto74', icon: 'fa-user-tie', color: 'text-mc-gold' },
+            { id: 'ALL', name: 'Alle 3', icon: 'fa-users', color: 'text-white' }
+        ];
+
+        // Quick Pick Items Preset
+        const quickItems = [
+            { name: 'Smaragd', count: '1' },
+            { name: 'Smaragde', count: '64' },
+            { name: 'Diamant', count: '1' },
+            { name: 'Diamanten', count: '64' },
+            { name: 'Netheritbarren', count: '1' },
+            { name: 'Goldbarren', count: '32' },
+            { name: 'Eisenbarren', count: '64' },
+            { name: 'Totem der Unsterblichkeit', count: '1' },
+            { name: 'Elytra', count: '1' },
+            { name: 'Zauberbuch', count: '1' },
+            { name: 'Beacon', count: '1' },
+            { name: 'Shulker-Box', count: '1' }
+        ];
+
+        // Initialize App
+        window.onload = function() {
+            renderSellers();
+            renderInputs();
+            renderQuickPickers();
+            generateCommand();
+        };
+
+        // Render Seller Buttons
+        function renderSellers() {
+            const container = document.getElementById('seller-buttons-container');
+            container.innerHTML = '';
+
+            sellers.forEach(seller => {
+                const isSelected = currentTarget === seller.id;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                
+                if (isSelected) {
+                    btn.className = "py-2 px-2.5 rounded-xl text-xs font-bold transition-all border flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 bg-mc-cardLight border-mc-emerald text-white shadow-md";
+                } else {
+                    btn.className = "py-2 px-2.5 rounded-xl text-xs font-medium transition-all border border-mc-border/70 bg-black/30 hover:bg-white/5 text-gray-400 hover:text-white flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5";
+                }
+
+                btn.onclick = () => selectTarget(seller.id);
+                btn.innerHTML = `
+                    <i class="fa-solid ${seller.icon} ${seller.color} text-xs"></i>
+                    <span class="truncate">${seller.name}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        // Set target seller
+        function selectTarget(sellerId) {
+            currentTarget = sellerId;
+            renderSellers();
+            generateCommand();
+        }
+
+        // Switch between Trade and Buy modes
+        function setMode(mode) {
+            currentMode = mode;
+            
+            const tabTrade = document.getElementById('tab-trade');
+            const tabBuy = document.getElementById('tab-buy');
+
+            if (mode === 'trade') {
+                tabTrade.className = "py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 bg-mc-cardLight text-mc-emerald border border-mc-emerald/30 shadow-md";
+                tabBuy.className = "py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-white hover:bg-white/5";
+                activeTargetInput = 'give';
+            } else {
+                tabBuy.className = "py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 bg-mc-cardLight text-mc-diamond border border-mc-diamond/30 shadow-md";
+                tabTrade.className = "py-2 px-4 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-white hover:bg-white/5";
+                activeTargetInput = 'buyItem';
+            }
+
+            renderInputs();
+            generateCommand();
+        }
+
+        // Render Dynamic Inputs
+        function renderInputs() {
+            const container = document.getElementById('inputs-container');
+            
+            if (currentMode === 'trade') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- What You Give -->
+                        <div>
+                            <label class="block text-xs font-bold text-mc-emerald uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                                <span><i class="fa-solid fa-arrow-up-from-bracket mr-1"></i> Was gibst du?</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="number" id="give-qty" value="1" min="1" max="2304" oninput="generateCommand()" class="w-20 bg-black/50 border border-mc-border rounded-xl px-2.5 py-2 text-sm text-center font-mono text-white focus:outline-none focus:border-mc-emerald">
+                                <input type="text" id="give-item" value="Smaragd" onfocus="activeTargetInput='give'" oninput="generateCommand()" placeholder="Item Name" class="w-full bg-black/50 border border-mc-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-emerald">
+                            </div>
+                        </div>
+
+                        <!-- What You Want -->
+                        <div>
+                            <label class="block text-xs font-bold text-mc-diamond uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                                <span><i class="fa-solid fa-arrow-down-to-bracket mr-1"></i> Was willst du?</span>
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="number" id="want-qty" value="1" min="1" max="2304" oninput="generateCommand()" class="w-20 bg-black/50 border border-mc-border rounded-xl px-2.5 py-2 text-sm text-center font-mono text-white focus:outline-none focus:border-mc-diamond">
+                                <input type="text" id="want-item" value="Diamant" onfocus="activeTargetInput='want'" oninput="generateCommand()" placeholder="Item Name" class="w-full bg-black/50 border border-mc-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-mc-diamond">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-bold text-mc-diamond uppercase tracking-wider mb-1.5 flex items-center">
+                            <i class="fa-solid fa-basket-shopping mr-1.5"></i> Welches Item möchtest du kaufen?
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="number" id="buy-qty" value="1" min="1" max="2304" oninput="generateCommand()" class="w-24 bg-black/50 border border-mc-border rounded-xl px-3 py-2 text-sm text-center font-mono text-white focus:outline-none focus:border-mc-diamond">
+                            <input type="text" id="buy-item" value="Elytra" onfocus="activeTargetInput='buyItem'" oninput="generateCommand()" placeholder="Item Name" class="w-full bg-black/50 border border-mc-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-mc-diamond">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render Quick Picker Items
+        function renderQuickPickers() {
+            const container = document.getElementById('quick-pickers');
+            container.innerHTML = '';
+            
+            quickItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = "text-[11px] bg-black/40 hover:bg-mc-cardLight border border-mc-border/80 hover:border-mc-emerald/50 text-gray-300 hover:text-white px-2.5 py-1 rounded-lg transition-all duration-150 flex items-center space-x-1";
+                btn.innerHTML = `<span class="text-mc-gold font-mono">${item.count}x</span> <span>${item.name}</span>`;
+                btn.onclick = () => selectQuickItem(item.name, item.count);
+                container.appendChild(btn);
+            });
+        }
+
+        // Handle Quick Item Insertion
+        function selectQuickItem(itemName, count) {
+            if (currentMode === 'trade') {
+                if (activeTargetInput === 'give') {
+                    document.getElementById('give-item').value = itemName;
+                    document.getElementById('give-qty').value = count;
+                } else {
+                    document.getElementById('want-item').value = itemName;
+                    document.getElementById('want-qty').value = count;
+                }
+            } else {
+                document.getElementById('buy-item').value = itemName;
+                document.getElementById('buy-qty').value = count;
+            }
+            generateCommand();
+        }
+
+        // Generate Command and Minecraft Chat Preview
+        function generateCommand() {
+            const targets = currentTarget === 'ALL' 
+                ? ['PeterKot', 'Eduard_007', 'Pauletto74'] 
+                : [currentTarget];
+            
+            let commandLines = [];
+            let chatHTML = "";
+
+            if (currentMode === 'trade') {
+                const giveQty = document.getElementById('give-qty')?.value || "1";
+                const giveItem = document.getElementById('give-item')?.value.trim() || "...";
+                const wantQty = document.getElementById('want-qty')?.value || "1";
+                const wantItem = document.getElementById('want-item')?.value.trim() || "...";
+
+                const msgText = `Hey! Ich möchte ${giveQty}x ${giveItem} gegen ${wantQty}x ${wantItem} tauschen.`;
+
+                targets.forEach(target => {
+                    commandLines.push(`/msg ${target} ${msgText}`);
+                    chatHTML += `
+                        <div>
+                            <span class="mc-text-gray">[</span><span class="mc-text-gold">Ich</span> 
+                            <span class="mc-text-gray">&rarr;</span> 
+                            <span class="mc-text-gold">${target}</span><span class="mc-text-gray">]</span> 
+                            <span class="mc-text-white">Hey! Ich möchte </span>
+                            <span class="mc-text-green">${giveQty}x ${giveItem}</span> 
+                            <span class="mc-text-white">gegen </span>
+                            <span class="mc-text-aqua">${wantQty}x ${wantItem}</span> 
+                            <span class="mc-text-white">tauschen.</span>
+                        </div>
+                    `;
+                });
+            } else {
+                const buyQty = document.getElementById('buy-qty')?.value || "1";
+                const buyItem = document.getElementById('buy-item')?.value.trim() || "...";
+
+                const msgText = `Hey! Ich möchte ${buyQty}x ${buyItem} kaufen. Hast du das auf Lager?`;
+
+                targets.forEach(target => {
+                    commandLines.push(`/msg ${target} ${msgText}`);
+                    chatHTML += `
+                        <div>
+                            <span class="mc-text-gray">[</span><span class="mc-text-gold">Ich</span> 
+                            <span class="mc-text-gray">&rarr;</span> 
+                            <span class="mc-text-gold">${target}</span><span class="mc-text-gray">]</span> 
+                            <span class="mc-text-white">Hey! Ich möchte </span>
+                            <span class="mc-text-aqua">${buyQty}x ${buyItem}</span> 
+                            <span class="mc-text-white">kaufen. Hast du das auf Lager?</span>
+                        </div>
+                    `;
+                });
+            }
+
+            const finalCommandText = commandLines.join('\n');
+            document.getElementById('command-output').innerText = finalCommandText;
+            document.getElementById('command-length').innerText = `${finalCommandText.length} Zeichen`;
+            document.getElementById('chat-preview').innerHTML = chatHTML;
+        }
+
+        // Copy Command to Clipboard
+        function copyCommand() {
+            const commandText = document.getElementById('command-output').innerText;
+            
+            // Clipboard Fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = commandText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            // Visual Feedback
+            const btn = document.getElementById('copy-btn');
+            const btnText = document.getElementById('copy-btn-text');
+            
+            btn.className = "w-full bg-white text-black font-extrabold py-3.5 rounded-xl text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-lg cursor-pointer scale-105";
+            btnText.innerHTML = '<i class="fa-solid fa-check text-emerald-600 mr-1 text-sm"></i> ' + (currentTarget === 'ALL' ? 'Alle 3 Befehle Kopiert! ✓' : 'Befehl Kopiert! ✓');
+
+            setTimeout(() => {
+                btn.className = "w-full bg-mc-emerald hover:bg-emerald-400 text-black font-extrabold py-3.5 rounded-xl text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-lg cursor-pointer";
+                btnText.innerHTML = 'Befehl Kopieren';
+            }, 1800);
+        }
+    </script>
+</body>
+</html>
